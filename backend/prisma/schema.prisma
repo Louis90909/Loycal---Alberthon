@@ -1,0 +1,483 @@
+// Schéma Prisma pour Loycal
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// UTILISATEURS
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
+  role          UserRole
+  status        UserStatus @default(ACTIVE)
+  restaurantId  Int?      @map("restaurant_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  memberships   UserLoyaltyMembership[]
+  visits        Visit[]
+  reservations  Reservation[]
+  posOrders     POSOrder[]
+  rewards       UserReward[]
+  customers     Customer[]
+
+  @@index([email])
+  @@index([restaurantId])
+  @@map("users")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  RESTAURATEUR
+  CLIENT
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+// ============================================
+// RESTAURANTS
+// ============================================
+
+model Restaurant {
+  id              Int      @id @default(autoincrement())
+  name            String
+  cuisine         String?
+  offer           String?  // Offre de bienvenue
+  description     String?  @db.Text
+  lat             Decimal? @db.Decimal(10, 8)
+  lng             Decimal? @db.Decimal(11, 8)
+  budget          Int?     // 1, 2, ou 3
+  popularity      String?
+  ambiance        String?
+  status          RestaurantStatus @default(ACTIVE)
+  aggregateRating Decimal? @default(0) @map("aggregate_rating") @db.Decimal(3, 2)
+  visitCount      Int      @default(0) @map("visit_count")
+  rewardScore     Int      @default(0) @map("reward_score")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  users           User[]
+  loyaltyProgram  LoyaltyProgram?
+  menuItems       MenuItem[]
+  memberships     UserLoyaltyMembership[]
+  visits          Visit[]
+  reservations    Reservation[]
+  campaigns       Campaign[]
+  flashPromotions FlashPromotion[]
+  promotions     Promotion[]
+  posOrders       POSOrder[]
+  rewards         Reward[]
+  customers      Customer[]
+
+  @@map("restaurants")
+}
+
+enum RestaurantStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// ============================================
+// PROGRAMME DE FIDÉLITÉ
+// ============================================
+
+model LoyaltyProgram {
+  id            String   @id @default(uuid())
+  restaurantId  Int      @unique @map("restaurant_id")
+  type          LoyaltyProgramType
+  spendingRatio Decimal? @map("spending_ratio") @db.Decimal(5, 2)
+  targetCount   Int?     @map("target_count")
+  targetSpending Decimal? @map("target_spending") @db.Decimal(10, 2)
+  welcomeBonus  Int      @default(0) @map("welcome_bonus")
+  rewardLabel   String?  @map("reward_label")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  missions      LoyaltyMission[]
+
+  @@map("loyalty_programs")
+}
+
+enum LoyaltyProgramType {
+  points
+  stamps
+  spending
+  missions
+}
+
+model LoyaltyMission {
+  id        String   @id @default(uuid())
+  programId String   @map("program_id")
+  title     String
+  goal      Int
+  reward    String
+  icon      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  program   LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  progress  MissionProgress[]
+
+  @@map("loyalty_missions")
+}
+
+// ============================================
+// ADHÉSIONS CLIENTS
+// ============================================
+
+model UserLoyaltyMembership {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  restaurantId      Int      @map("restaurant_id")
+  points            Int      @default(0)
+  stamps            Int      @default(0)
+  tier              LoyaltyTier @default(Bronze)
+  nextTierThreshold Int?     @map("next_tier_threshold")
+  joinedDate        DateTime @default(now()) @map("joined_date")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  missionProgress   MissionProgress[]
+
+  @@unique([userId, restaurantId])
+  @@map("user_loyalty_memberships")
+}
+
+enum LoyaltyTier {
+  Bronze
+  Silver
+  Gold
+}
+
+model MissionProgress {
+  id          String    @id @default(uuid())
+  membershipId String   @map("membership_id")
+  missionId   String    @map("mission_id")
+  current     Int       @default(0)
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  membership UserLoyaltyMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  mission    LoyaltyMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, missionId])
+  @@map("mission_progress")
+}
+
+// ============================================
+// RÉCOMPENSES
+// ============================================
+
+model Reward {
+  id          String    @id @default(uuid())
+  restaurantId Int      @map("restaurant_id")
+  type        String
+  description String    @db.Text
+  cost        Int       // En points
+  isRealTime  Boolean   @default(false) @map("is_real_time")
+  expiry      DateTime?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  restaurant  Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  userRewards UserReward[]
+  posOrders   POSOrder[]
+
+  @@map("rewards")
+}
+
+model UserReward {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  rewardId  String    @map("reward_id")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward    Reward    @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@map("user_rewards")
+}
+
+// ============================================
+// MENUS
+// ============================================
+
+model MenuItem {
+  id          String    @id @default(uuid())
+  restaurantId Int      @map("restaurant_id")
+  name        String
+  price       Decimal   @db.Decimal(10, 2)
+  category    String
+  imageUrl    String?   @map("image_url")
+  available   Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  restaurant  Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  flashPromotions FlashPromotion[]
+  orderItems  POSOrderItem[]
+
+  @@map("menu_items")
+}
+
+// ============================================
+// RÉSERVATIONS
+// ============================================
+
+model Reservation {
+  id          String          @id @default(uuid())
+  restaurantId Int            @map("restaurant_id")
+  userId      String         @map("user_id")
+  date        DateTime       @db.Date
+  time        DateTime       @db.Time
+  guests      Int
+  status      ReservationStatus @default(confirmed)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  restaurant  Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, date])
+  @@map("reservations")
+}
+
+enum ReservationStatus {
+  confirmed
+  cancelled
+  completed
+}
+
+// ============================================
+// VISITES (TRANSACTIONS)
+// ============================================
+
+model Visit {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  restaurantId    Int      @map("restaurant_id")
+  date            DateTime  @default(now())
+  amount          Decimal?  @db.Decimal(10, 2)
+  pointsEarned    Int      @default(0) @map("points_earned")
+  validationMethod String? @map("validation_method")
+  validationCode String?  @map("validation_code")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant      Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([userId, restaurantId])
+  @@index([date])
+  @@map("visits")
+}
+
+// ============================================
+// POS (SYSTÈME DE CAISSE)
+// ============================================
+
+model POSOrder {
+  id            String        @id @default(uuid())
+  restaurantId  Int           @map("restaurant_id")
+  userId        String?       @map("user_id")
+  status        POSOrderStatus @default(pending)
+  total         Decimal        @db.Decimal(10, 2)
+  type          POSOrderType?
+  paymentMethod String?       @map("payment_method")
+  tableNumber   String?       @map("table_number")
+  appliedRewardId String?     @map("applied_reward_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  appliedReward Reward?        @relation(fields: [appliedRewardId], references: [id], onDelete: SetNull)
+  items         POSOrderItem[]
+
+  @@index([restaurantId])
+  @@map("pos_orders")
+}
+
+enum POSOrderStatus {
+  pending
+  paid
+  cancelled
+}
+
+enum POSOrderType {
+  dine_in
+  takeaway
+  delivery
+}
+
+model POSOrderItem {
+  id          String   @id @default(uuid())
+  orderId     String   @map("order_id")
+  menuItemId  String   @map("menu_item_id")
+  quantity    Int
+  price       Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  order       POSOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@map("pos_order_items")
+}
+
+// ============================================
+// CAMPAGNES MARKETING
+// ============================================
+
+model Campaign {
+  id            String          @id @default(uuid())
+  restaurantId  Int             @map("restaurant_id")
+  name          String
+  type          CampaignType
+  status        CampaignStatus  @default(active)
+  description   String?         @db.Text
+  targetSegment String?          @map("target_segment")
+  flashPromoId  String?         @map("flash_promo_id")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  restaurant    Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  stats         CampaignStats?
+
+  @@index([restaurantId])
+  @@map("campaigns")
+}
+
+enum CampaignType {
+  SMS
+  Email
+  Push
+  reactivation
+  flash
+}
+
+enum CampaignStatus {
+  active
+  scheduled
+  ended
+}
+
+model CampaignStats {
+  id            String   @id @default(uuid())
+  campaignId    String   @unique @map("campaign_id")
+  openRate      Decimal  @default(0) @map("open_rate") @db.Decimal(5, 2)
+  conversionRate Decimal @default(0) @map("conversion_rate") @db.Decimal(5, 2)
+  revenue       Decimal  @default(0) @db.Decimal(10, 2)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@map("campaign_stats")
+}
+
+// ============================================
+// PROMOTIONS FLASH
+// ============================================
+
+model FlashPromotion {
+  id                String   @id @default(uuid())
+  restaurantId      Int      @map("restaurant_id")
+  menuItemId        String   @map("menu_item_id")
+  itemName          String   @map("item_name")
+  discountPrice     Decimal  @map("discount_price") @db.Decimal(10, 2)
+  originalPrice     Decimal  @map("original_price") @db.Decimal(10, 2)
+  quantityTotal     Int      @map("quantity_total")
+  quantityRemaining Int      @map("quantity_remaining")
+  startTime         DateTime @db.Time @map("start_time")
+  endTime           DateTime @db.Time @map("end_time")
+  active            Boolean  @default(true)
+  targetSegment     String?  @map("target_segment")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  menuItem          MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@map("flash_promotions")
+}
+
+// ============================================
+// PROMOTIONS
+// ============================================
+
+model Promotion {
+  id          String   @id @default(uuid())
+  restaurantId Int     @map("restaurant_id")
+  title       String
+  description String?  @db.Text
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  restaurant  Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@map("promotions")
+}
+
+// ============================================
+// CLIENTS (SEGMENTATION)
+// ============================================
+
+model Customer {
+  id                Int       @id @default(autoincrement())
+  userId            String    @map("user_id")
+  restaurantId      Int       @map("restaurant_id")
+  visitsPerMonth    Int       @default(0) @map("visits_per_month")
+  lastVisit         DateTime? @map("last_visit")
+  averageTicket     Decimal   @default(0) @map("average_ticket") @db.Decimal(10, 2)
+  totalRevenue      Decimal   @default(0) @map("total_revenue") @db.Decimal(10, 2)
+  loyaltyScore      Int       @default(0) @map("loyalty_score")
+  status            String?
+  churnProbability  Decimal?  @map("churn_probability") @db.Decimal(5, 2)
+  preferredDay      String?   @map("preferred_day")
+  preferredService   String?   @map("preferred_service")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  visitHistory      VisitHistory[]
+
+  @@unique([userId, restaurantId])
+  @@map("customers")
+}
+
+model VisitHistory {
+  id          String   @id @default(uuid())
+  customerId Int      @map("customer_id")
+  month      String   // Format 'YYYY-MM'
+  visits     Int      @default(0)
+  spent      Decimal  @default(0) @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, month])
+  @@map("visit_history")
+}
+
+
+
+
+
+
