@@ -1,0 +1,7 @@
+{
+  "name": "Loycal AI ",
+  "description": "An intelligent dashboard for independent restaurant owners to understand their customers, generate personalized loyalty offers, and create marketing campaigns to grow their business.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
