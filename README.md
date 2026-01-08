@@ -1,4 +1,4 @@
- INTRODUCTION 
+ INTRODUCTION (à voir en vue code)
 "Loycal est une plateforme de fidélisation pour restaurants qui combine intelligence artificielle et gestion de la relation client. C'est une application full-stack moderne avec 3 interfaces : client, restaurateur et admin."
 
 Chiffres clés à retenir :
