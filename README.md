@@ -8,13 +8,13 @@
 
 ## ✨ Key Features
 
-- 🤖 **AI Assistant (Rémi)**: Intelligent chatbot powered by Google Gemini with RAG for personalized recommendations
-- 🎁 **Loyalty Program**: Points-based system with automated rewards and visit tracking
+-  **AI Assistant (Rémi)**: Intelligent chatbot powered by Google Gemini with RAG for personalized recommendations
+-  **Loyalty Program**: Points-based system with automated rewards and visit tracking
 - ⚡ **Flash Campaigns**: Time-limited promotional offers to drive customer engagement
-- 💳 **POS Integration**: Point-of-sale system with real-time order management
-- 📊 **Analytics Dashboard**: Comprehensive business insights with interactive charts
-- 📅 **Reservations**: Real-time booking system with instant confirmation
-- 👥 **Multi-Role Support**: Separate interfaces for customers, restaurateurs, and administrators
+-  **POS Integration**: Point-of-sale system with real-time order management
+-  **Analytics Dashboard**: Comprehensive business insights with interactive charts
+-  **Reservations**: Real-time booking system with instant confirmation
+-  **Multi-Role Support**: Separate interfaces for customers, restaurateurs, and administrators
 
 ## 🛠️ Tech Stack
 
@@ -32,7 +32,7 @@
 - **AI**: Google Gemini API with RAG implementation
 - **Architecture**: RESTful API with 35+ endpoints
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Node.js (v18 or higher)
@@ -99,7 +99,7 @@
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:3001
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 loycal-ai/
@@ -124,7 +124,7 @@ loycal-ai/
 
 ```
 
-## 🎯 Features Overview
+##  Features Overview
 
 ### For Customers (Loyer App)
 - Browse nearby restaurants
@@ -172,7 +172,7 @@ The application uses Prisma ORM with PostgreSQL. Key models include:
 
 View the complete schema in `prisma-schema.prisma`.
 
-## 🔐 Security
+## Security
 
 - JWT-based authentication
 - Password hashing with bcrypt
