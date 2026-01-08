@@ -1,4 +1,4 @@
-# 🎯 Loycal - AI-Powered Loyalty Platform for Restaurants
+#  Loycal - AI-Powered Loyalty Platform for Restaurants
 
 <div align="center">
   <img width="1200" height="475" alt="Loycal Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
@@ -6,7 +6,7 @@
 
 **Loycal** is a comprehensive loyalty and customer engagement platform designed specifically for restaurants. It combines modern web technologies with AI-powered features to help restaurateurs build stronger relationships with their customers.
 
-## ✨ Key Features
+##  Key Features
 
 -  **AI Assistant (Rémi)**: Intelligent chatbot powered by Google Gemini with RAG for personalized recommendations
 -  **Loyalty Program**: Points-based system with automated rewards and visit tracking
@@ -16,7 +16,7 @@
 -  **Reservations**: Real-time booking system with instant confirmation
 -  **Multi-Role Support**: Separate interfaces for customers, restaurateurs, and administrators
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 - **Framework**: React 18 + TypeScript
