@@ -3,10 +3,10 @@ import { MOCK_REMI_RECOMMENDATIONS } from '../../shared/constants';
 import { RemiIcon } from './icons/RemiIcon';
 import type { RestaurateurView } from '../../shared/types';
 import { KPICard, Card, CardHeader, CardContent, EmptyState, Skeleton, SkeletonGroup } from '../../shared/design';
-import { mockBackend } from '../../shared/mockBackend';
+import { getBackendService } from '../../shared/services/apiConfig';
 
 interface DashboardProps {
-    onNavigate: (view: RestaurateurView) => void;
+  onNavigate: (view: RestaurateurView) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
@@ -18,8 +18,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const user = mockBackend.getCurrentUser();
-        const data = await mockBackend.getAnalytics(user?.restaurantId || 1);
+        const backend = await getBackendService();
+        const user = backend.getCurrentUser();
+        const data = await backend.getAnalytics(user?.restaurantId || 1);
         setAnalytics(data);
       } catch (error) {
         console.error('Erreur chargement analytics:', error);
@@ -77,9 +78,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPICard
           title="Taux de Fidélisation"
-          value="32%"
+          value={`${analytics?.loyaltyRate || 32}%`}
           delta={{ value: 2.1, isPositive: true }}
-          subtitle="vs 28% le mois dernier"
+          subtitle="vs le mois dernier"
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -88,9 +89,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         />
         <KPICard
           title="Panier Moyen Fidèle"
-          value="38 €"
+          value={`${(analytics?.averageTicket || 0).toFixed(2)} €`}
           delta={{ value: 18, isPositive: true }}
-          subtitle="vs 32 € (non-membres)"
+          subtitle={`+${(analytics?.averageTicket || 0) > 30 ? 6 : 2} € (non-membres)`}
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -98,10 +99,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           }
         />
         <KPICard
-          title="Visites du jour"
-          value="42"
+          title="Visites (Semaine)"
+          value={analytics?.totalVisits || 42}
           delta={{ value: 5, isPositive: true }}
-          subtitle="28 membres Loycal identifiés"
+          subtitle="Cumul membres Loycal"
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -109,10 +110,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           }
         />
         <KPICard
-          title="Récompenses Offertes"
-          value="12"
-          delta={{ value: 10, isPositive: false }}
-          subtitle="Coût marketing maîtrisé"
+          title="Chiffre d'Affaires Fidélité"
+          value={`${(analytics?.totalRevenue || 0).toFixed(0)} €`}
+          delta={{ value: 10, isPositive: true }}
+          subtitle="Généré par les membres"
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
@@ -127,7 +128,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           {/* Décorations */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -mr-48 -mt-48"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full -ml-32 -mb-32"></div>
-          
+
           <div className="relative z-10 p-8">
             <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
               {/* Avatar Rémi */}
@@ -159,7 +160,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
               {/* CTA */}
               <div className="flex-shrink-0 w-full lg:w-auto">
-                <button 
+                <button
                   onClick={() => onNavigate('campaigns')}
                   className="w-full lg:w-auto px-6 py-4 bg-white text-indigo-700 font-bold rounded-xl shadow-2xl hover:shadow-xl hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 group"
                 >
@@ -210,15 +211,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </div>
         </Card>
       </div>
-      
+
       {/* 4. REMI INSIGHTS LIST (Améliorée) */}
       <Card padding="none">
-        <CardHeader 
-          title="Dernières analyses de Rémi" 
+        <CardHeader
+          title="Dernières analyses de Rémi"
           subtitle="Insights et recommandations basées sur vos données"
           icon={<RemiIcon className="w-6 h-6 text-orange-500" />}
           action={
-            <button 
+            <button
               onClick={() => onNavigate('remi-expert')}
               className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
             >
@@ -234,9 +235,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             MOCK_REMI_RECOMMENDATIONS.map(rec => (
               <div key={rec.id} className="p-5 hover:bg-gray-50 transition-colors group cursor-pointer" onClick={() => onNavigate(rec.type === 'opportunity' ? 'campaigns' : 'loyalty-program')}>
                 <div className="flex items-start gap-4">
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-2xl ${
-                    rec.type === 'alert' ? 'bg-yellow-100' : 'bg-blue-100'
-                  }`}>
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-2xl ${rec.type === 'alert' ? 'bg-yellow-100' : 'bg-blue-100'
+                    }`}>
                     {rec.type === 'alert' ? '⚠️' : '💡'}
                   </div>
                   <div className="flex-1 min-w-0">

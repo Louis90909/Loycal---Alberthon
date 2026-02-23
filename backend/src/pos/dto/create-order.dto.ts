@@ -1,6 +1,5 @@
 import { IsNumber, IsString, IsOptional, IsArray, ValidateNested, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { POSOrderType } from '@prisma/client';
 
 class OrderItemDto {
   @IsString()
@@ -30,7 +29,7 @@ export class CreateOrderDto {
 
   @IsString()
   @IsOptional()
-  type?: POSOrderType;
+  type?: string;
 
   @IsString()
   @IsOptional()
@@ -40,9 +39,3 @@ export class CreateOrderDto {
   @IsOptional()
   appliedRewardId?: string;
 }
-
-
-
-
-
-

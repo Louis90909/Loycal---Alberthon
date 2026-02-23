@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { mockBackend } from '../../shared/mockBackend';
+import { getBackendService } from '../../shared/services/apiConfig';
 
 interface ReservationItem {
     id: string;
@@ -20,37 +20,56 @@ const ReservationsManager: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'cancelled' | 'completed'>('all');
 
     useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        let isMounted = true;
+
+        const loadReservations = async () => {
+            try {
+                const backend = await getBackendService();
+                const user = backend.getCurrentUser();
+                if (!user || !user.restaurantId || !isMounted) return;
+
+                const allReservations = await (backend as any).getRestaurantReservations?.(user.restaurantId) || await (backend as any).getReservations(user.restaurantId);
+
+                if (!isMounted) return;
+
+                // Transform to ReservationItem format
+                const transformedReservations: ReservationItem[] = await Promise.all(allReservations.map(async (res: any) => {
+                    let customer = res.user;
+                    if (!customer && (backend as any).getUserById) {
+                        try { customer = await (backend as any).getUserById(res.userId); } catch (e) { }
+                    }
+
+                    return {
+                        id: res.id,
+                        type: res.flashPromoId ? 'flash' : 'table',
+                        customerName: customer ? `${customer.firstName} ${customer.lastName}` : 'Client inconnu',
+                        customerEmail: customer?.email || '',
+                        date: res.date,
+                        time: res.time,
+                        guests: res.guests,
+                        status: res.status,
+                        createdAt: res.createdAt,
+                        itemName: res.flashPromo?.itemName || 'Vente Flash'
+                    };
+                }));
+
+                setReservations(transformedReservations);
+
+                if (backend.subscribe && !unsubscribe) {
+                    unsubscribe = backend.subscribe(loadReservations);
+                }
+            } catch (error) {
+                console.error("Erreur de chargement des réservations", error);
+            }
+        };
+
         loadReservations();
-        const unsubscribe = mockBackend.subscribe(() => {
-            loadReservations();
-        });
-        return unsubscribe;
+        return () => {
+            isMounted = false;
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
-
-    const loadReservations = () => {
-        const user = mockBackend.getCurrentUser();
-        if (!user || !user.restaurantId) return;
-
-        const allReservations = mockBackend.getReservations(user.restaurantId);
-
-        // Transform to ReservationItem format
-        const transformedReservations: ReservationItem[] = allReservations.map(res => {
-            const customer = mockBackend.getUsers().find(u => u.id === res.userId);
-            return {
-                id: res.id,
-                type: 'table', // For now, all are table reservations
-                customerName: customer ? `${customer.firstName} ${customer.lastName}` : 'Client inconnu',
-                customerEmail: customer?.email || '',
-                date: res.date,
-                time: res.time,
-                guests: res.guests,
-                status: res.status,
-                createdAt: res.createdAt
-            };
-        });
-
-        setReservations(transformedReservations);
-    };
 
     const handleStatusChange = (id: string, newStatus: 'confirmed' | 'cancelled' | 'completed') => {
         setReservations(prev =>

@@ -4,7 +4,7 @@ import { CreateReservationDto } from './dto/create-reservation.dto';
 
 @Injectable()
 export class ReservationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async createReservation(userId: string, createDto: CreateReservationDto) {
     // Vérifier que le restaurant existe
@@ -29,6 +29,28 @@ export class ReservationsService {
       throw new BadRequestException('Cannot make reservation in the past');
     }
 
+    // Vérifier et décrémenter la quantité d'une promo flash si spécifiée
+    if (createDto.flashPromoId) {
+      const flashPromo = await this.prisma.flashPromotion.findUnique({
+        where: { id: createDto.flashPromoId },
+      });
+
+      if (!flashPromo || !flashPromo.active) {
+        throw new BadRequestException('Flash promotion is not available');
+      }
+
+      if (flashPromo.quantityRemaining <= 0) {
+        throw new BadRequestException('Flash promotion is out of stock');
+      }
+
+      await this.prisma.flashPromotion.update({
+        where: { id: flashPromo.id },
+        data: {
+          quantityRemaining: { decrement: 1 },
+        },
+      });
+    }
+
     // Créer la réservation
     const reservation = await this.prisma.reservation.create({
       data: {
@@ -38,6 +60,7 @@ export class ReservationsService {
         time: new Date(`1970-01-01T${createDto.time}:00`),
         guests: createDto.guests,
         status: 'confirmed',
+        flashPromoId: createDto.flashPromoId || null,
       },
       include: {
         restaurant: {
@@ -49,6 +72,32 @@ export class ReservationsService {
         },
       },
     });
+
+    // Mettre à jour ou créer le profil Customer pour le restaurateur
+    const customer = await this.prisma.customer.findUnique({
+      where: {
+        userId_restaurantId: {
+          userId,
+          restaurantId: createDto.restaurantId,
+        },
+      },
+    });
+
+    if (customer) {
+      await this.prisma.customer.update({
+        where: { id: customer.id },
+        data: { lastVisit: new Date() },
+      });
+    } else {
+      await this.prisma.customer.create({
+        data: {
+          userId,
+          restaurantId: createDto.restaurantId,
+          lastVisit: new Date(),
+          status: 'Nouveau',
+        },
+      });
+    }
 
     return reservation;
   }
@@ -112,6 +161,8 @@ export class ReservationsService {
     });
   }
 }
+
+
 
 
 

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { mockBackend } from '../../shared/mockBackend';
+import { getBackendService } from '../../shared/services/apiConfig';
 import { SpinnerIcon } from '../../restaurateur/components/icons/SpinnerIcon';
 
 interface BookingModalProps {
@@ -31,12 +31,13 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, restaurant
         setStep('loading');
 
         try {
-            const user = mockBackend.getCurrentUser();
+            const backend = await getBackendService();
+            const user = backend.getCurrentUser();
             if (!user) {
                 throw new Error('Vous devez être connecté pour réserver');
             }
 
-            await mockBackend.createReservation({
+            await backend.createReservation({
                 restaurantId,
                 userId: user.id,
                 date,

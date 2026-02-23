@@ -1,63 +1,67 @@
 
 import React, { useState, useEffect } from 'react';
-import { mockBackend } from '../../shared/mockBackend';
+import { getBackendService } from '../../shared/services/apiConfig';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import type { MenuItem, Restaurant } from '../../shared/types';
 
 const RestaurantProfileEditor: React.FC = () => {
-    const [user, setUser] = useState(mockBackend.getCurrentUser());
+    const [user, setUser] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'general' | 'menu'>('general');
     const [isLoading, setIsLoading] = useState(false);
     const [isPageLoading, setIsPageLoading] = useState(true);
     const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
-    
-    const [info, setInfo] = useState({ 
-        name: '', cuisine: '', offer: '', description: '', 
+
+    const [info, setInfo] = useState({
+        name: '', cuisine: '', offer: '', description: '',
         ambiance: 'Cozy' as any, budget: 2 as any
     });
     const [menu, setMenu] = useState<MenuItem[]>([]);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
     useEffect(() => {
+        let isMounted = true;
         const load = async () => {
             setIsPageLoading(true);
             try {
-                const userId = user?.id;
-                if (!userId || !user?.restaurantId) {
-                    setIsPageLoading(false);
+                const backend = await getBackendService();
+                const currentUser = backend.getCurrentUser();
+                if (isMounted) setUser(currentUser);
+
+                const userId = currentUser?.id;
+                if (!userId || !currentUser?.restaurantId) {
+                    if (isMounted) setIsPageLoading(false);
                     return;
                 }
-                
+
                 // Récupérer le restaurant depuis l'API
-                const r = await mockBackend.getRestaurant(user.restaurantId);
-                
-                if (r) {
+                const r = await backend.getRestaurant(
+                    currentUser.restaurantId
+                );
+
+                if (r && isMounted) {
                     setRestaurant(r);
                     setInfo({
-                        name: r.name || '', 
-                        cuisine: r.cuisine || '', 
+                        name: r.name || '',
+                        cuisine: r.cuisine || '',
                         offer: r.offer || '',
-                        description: r.description || '', 
-                        ambiance: r.ambiance || 'Cozy', 
+                        description: r.description || '',
+                        ambiance: r.ambiance || 'Cozy',
                         budget: r.budget || 2
                     });
                     setMenu(r.menu || []);
-                } else {
+                } else if (isMounted && !r) {
                     console.error('Restaurant not found');
                 }
             } catch (error: any) {
                 console.error('Error loading restaurant:', error);
             } finally {
-                setIsPageLoading(false);
+                if (isMounted) setIsPageLoading(false);
             }
         };
-        
-        if (user) {
-            load();
-        } else {
-            setIsPageLoading(false);
-        }
-    }, [user]);
+
+        load();
+        return () => { isMounted = false; };
+    }, []);
 
     const handleSaveGeneral = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -66,20 +70,22 @@ const RestaurantProfileEditor: React.FC = () => {
             if (!user?.restaurantId) {
                 throw new Error('Restaurant ID manquant');
             }
-            
-            await mockBackend.updateRestaurantProfile(user.restaurantId, info);
+
+            const backend = await getBackendService();
+            const rId = user.restaurantId;
+            await backend.updateRestaurantProfile(rId, info);
             alert("Profil mis à jour avec succès !");
-            
+
             // Recharger les données
-            const updated = await mockBackend.getRestaurant(user.restaurantId);
+            const updated = await backend.getRestaurant(rId);
             if (updated) {
                 setRestaurant(updated);
                 setInfo({
-                    name: updated.name || '', 
-                    cuisine: updated.cuisine || '', 
+                    name: updated.name || '',
+                    cuisine: updated.cuisine || '',
                     offer: updated.offer || '',
-                    description: updated.description || '', 
-                    ambiance: updated.ambiance || 'Cozy', 
+                    description: updated.description || '',
+                    ambiance: updated.ambiance || 'Cozy',
                     budget: updated.budget || 2
                 });
             }
@@ -91,18 +97,20 @@ const RestaurantProfileEditor: React.FC = () => {
         }
     };
 
-    const handleSaveMenu = async () => {
+    const handleSaveMenu = async (menuDataToSave: MenuItem[] = menu, silent = false) => {
         setIsLoading(true);
         try {
             if (!user?.restaurantId) {
                 throw new Error('Restaurant ID manquant');
             }
-            
-            await mockBackend.updateRestaurantMenu(user.restaurantId, menu);
-            alert("La carte a été publiée.");
-            
+
+            const backend = await getBackendService();
+            const rId = user.restaurantId;
+            await backend.updateRestaurantMenu(rId, menuDataToSave);
+            if (!silent) alert("La carte a été publiée.");
+
             // Recharger les données
-            const updated = await mockBackend.getRestaurant(user.restaurantId);
+            const updated = await backend.getRestaurant(rId);
             if (updated) {
                 setRestaurant(updated);
                 setMenu(updated.menu || []);
@@ -115,19 +123,24 @@ const RestaurantProfileEditor: React.FC = () => {
         }
     };
 
-    const addOrUpdateMenuItem = () => {
+    const addOrUpdateMenuItem = async () => {
         if (!editingItem) return;
+        let newMenu;
         if (editingItem.id) {
-            setMenu(menu.map(m => m.id === editingItem.id ? editingItem : m));
+            newMenu = menu.map(m => m.id === editingItem.id ? editingItem : m);
         } else {
-            setMenu([...menu, { ...editingItem, id: `item-${Date.now()}` }]);
+            newMenu = [...menu, { ...editingItem, id: `item-${Date.now()}` }];
         }
+        setMenu(newMenu);
         setEditingItem(null);
+        await handleSaveMenu(newMenu, true);
     };
 
-    const deleteMenuItem = (id: string) => {
+    const deleteMenuItem = async (id: string) => {
         if (window.confirm("Supprimer ce plat ?")) {
-            setMenu(menu.filter(m => m.id !== id));
+            const newMenu = menu.filter(m => m.id !== id);
+            setMenu(newMenu);
+            await handleSaveMenu(newMenu, true);
         }
     };
 
@@ -158,32 +171,32 @@ const RestaurantProfileEditor: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="md:col-span-2">
                             <label className="block text-sm font-bold text-gray-700 mb-2">Nom du restaurant</label>
-                            <input required type="text" value={info.name} onChange={e => setInfo({...info, name: e.target.value})} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none" />
+                            <input required type="text" value={info.name} onChange={e => setInfo({ ...info, name: e.target.value })} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none" />
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-2">Cuisine</label>
-                            <input required type="text" value={info.cuisine} onChange={e => setInfo({...info, cuisine: e.target.value})} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none" />
+                            <input required type="text" value={info.cuisine} onChange={e => setInfo({ ...info, cuisine: e.target.value })} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none" />
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-2">Offre de bienvenue</label>
-                            <input required type="text" value={info.offer} onChange={e => setInfo({...info, offer: e.target.value})} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none" />
+                            <input required type="text" value={info.offer} onChange={e => setInfo({ ...info, offer: e.target.value })} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none" />
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-2">Ambiance</label>
-                            <select value={info.ambiance} onChange={e => setInfo({...info, ambiance: e.target.value as any})} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none">
+                            <select value={info.ambiance} onChange={e => setInfo({ ...info, ambiance: e.target.value as any })} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none">
                                 <option>Cozy</option><option>Festif</option><option>Romantique</option><option>Business</option><option>Chill</option>
                             </select>
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-2">Budget moyen</label>
-                            <select value={info.budget} onChange={e => setInfo({...info, budget: parseInt(e.target.value) as any})} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none">
+                            <select value={info.budget} onChange={e => setInfo({ ...info, budget: parseInt(e.target.value) as any })} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none">
                                 <option value="1">€</option><option value="2">€€</option><option value="3">€€€</option>
                             </select>
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
-                        <textarea rows={4} value={info.description} onChange={e => setInfo({...info, description: e.target.value})} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none" />
+                        <textarea rows={4} value={info.description} onChange={e => setInfo({ ...info, description: e.target.value })} className="w-full bg-gray-50 border-gray-200 rounded-xl p-3 border focus:border-brand-primary outline-none" />
                     </div>
                     <div className="flex justify-end pt-4">
                         <button type="submit" disabled={isLoading} className="px-8 py-3 bg-brand-primary text-white font-bold rounded-xl shadow-lg flex items-center min-w-[140px] justify-center transition-all active:scale-95">
@@ -232,16 +245,16 @@ const RestaurantProfileEditor: React.FC = () => {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nom du plat</label>
-                                <input type="text" required value={editingItem.name} onChange={e => setEditingItem({...editingItem, name: e.target.value})} className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-brand-primary" />
+                                <input type="text" required value={editingItem.name} onChange={e => setEditingItem({ ...editingItem, name: e.target.value })} className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-brand-primary" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Prix (€)</label>
-                                    <input type="number" step="0.5" required value={editingItem.price} onChange={e => setEditingItem({...editingItem, price: parseFloat(e.target.value)})} className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-brand-primary" />
+                                    <input type="number" step="0.5" required value={editingItem.price} onChange={e => setEditingItem({ ...editingItem, price: parseFloat(e.target.value) })} className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-brand-primary" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Catégorie</label>
-                                    <select value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-brand-primary">
+                                    <select value={editingItem.category} onChange={e => setEditingItem({ ...editingItem, category: e.target.value })} className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-brand-primary">
                                         <option>Plats</option><option>Entrées</option><option>Desserts</option><option>Boissons</option>
                                     </select>
                                 </div>

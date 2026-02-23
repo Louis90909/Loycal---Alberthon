@@ -53,6 +53,7 @@ export interface FlashPromotion {
     endTime: string;   // "HH:mm"
     active: boolean;
     createdAt: string;
+    targetSegment?: string;
 }
 
 export interface Campaign {
@@ -106,7 +107,7 @@ export interface Restaurant {
 export type CustomerStatus = 'Premium' | 'Fidèle' | 'Habitué' | 'Inactif' | 'Nouveau' | 'Occasionnel' | 'VIP';
 
 export interface Customer {
-    id: number;
+    id: number | string;
     name: string;
     avatarUrl: string;
     visitsPerMonth: number;
@@ -174,6 +175,7 @@ export interface POSOrder {
     appliedReward?: Reward;
     paymentMethod?: string;
     tableNumber?: string; // Added for POSSystem
+    restaurantId?: number;
 }
 
 // --- AI SERVICE TYPES ---

@@ -1,5 +1,4 @@
-import { IsOptional, IsString, IsNumber, IsEnum } from 'class-validator';
-import { RestaurantStatus } from '@prisma/client';
+import { IsOptional, IsString, IsNumber } from 'class-validator';
 
 export class UpdateRestaurantDto {
   @IsOptional()
@@ -39,12 +38,6 @@ export class UpdateRestaurantDto {
   ambiance?: string;
 
   @IsOptional()
-  @IsEnum(RestaurantStatus)
-  status?: RestaurantStatus;
+  @IsString()
+  status?: string;
 }
-
-
-
-
-
-

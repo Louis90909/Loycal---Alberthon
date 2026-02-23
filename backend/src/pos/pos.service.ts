@@ -5,7 +5,7 @@ import { PayOrderDto } from './dto/pay-order.dto';
 
 @Injectable()
 export class POSService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async createOrder(createDto: CreateOrderDto) {
     // Vérifier que le restaurant existe
@@ -199,6 +199,43 @@ export class POSService {
 
     // Si l'utilisateur est connecté, créer une visite et attribuer des points
     if (order.userId) {
+      const customer = await this.prisma.customer.findUnique({
+        where: {
+          userId_restaurantId: {
+            userId: order.userId,
+            restaurantId: order.restaurantId,
+          },
+        },
+      });
+
+      if (customer) {
+        const newTotalRevenue = Number(customer.totalRevenue) + Number(order.total);
+        const newVisits = customer.visitsPerMonth + 1;
+        const newAverageTicket = newTotalRevenue / newVisits;
+
+        await this.prisma.customer.update({
+          where: { id: customer.id },
+          data: {
+            lastVisit: new Date(),
+            totalRevenue: newTotalRevenue,
+            averageTicket: newAverageTicket,
+            visitsPerMonth: newVisits,
+          },
+        });
+      } else {
+        await this.prisma.customer.create({
+          data: {
+            userId: order.userId,
+            restaurantId: order.restaurantId,
+            lastVisit: new Date(),
+            totalRevenue: Number(order.total),
+            averageTicket: Number(order.total),
+            visitsPerMonth: 1,
+            status: 'Nouveau',
+          },
+        });
+      }
+
       await this.createVisitFromOrder(updatedOrder);
     }
 
@@ -263,7 +300,7 @@ export class POSService {
     // Calculer les points selon le programme
     let pointsEarned = 0;
     if (program && program.type === 'points' && program.spendingRatio) {
-      pointsEarned = Math.floor(Number(order.total) * program.spendingRatio);
+      pointsEarned = Math.floor(Number(order.total) * Number(program.spendingRatio));
     } else {
       pointsEarned = Math.floor(Number(order.total) * 1.5); // Par défaut
     }
@@ -299,6 +336,8 @@ export class POSService {
     }
   }
 }
+
+
 
 
 

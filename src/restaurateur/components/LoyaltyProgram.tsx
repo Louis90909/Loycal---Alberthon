@@ -4,7 +4,7 @@ import { RemiIcon } from './icons/RemiIcon';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import type { LoyaltyProgramType, LoyaltyConfig, Mission } from '../../shared/types';
 import { generateDynamicInsight } from '../services/geminiService';
-import { mockBackend } from '../../shared/mockBackend';
+import { getBackendService } from '../../shared/services/apiConfig';
 
 // --- COMPONENTS ---
 
@@ -36,7 +36,7 @@ const LoyaltyProgram: React.FC = () => {
         missions: []
     });
 
-    const [newMission, setNewMission] = useState<{title: string, goal: number, reward: string}>({ title: '', goal: 1, reward: '' });
+    const [newMission, setNewMission] = useState<{ title: string, goal: number, reward: string }>({ title: '', goal: 1, reward: '' });
     const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [aiInsight, setAiInsight] = useState<string>("Chargement de l'analyse de Rémi...");
@@ -46,18 +46,21 @@ const LoyaltyProgram: React.FC = () => {
         const fetchInsight = async () => {
             setIsInsightLoading(true);
             try {
-                const user = mockBackend.getCurrentUser();
+                const backend = await getBackendService();
+                const user = backend.getCurrentUser();
                 if (user?.restaurantId) {
-                    const analytics = await mockBackend.getAnalytics(user.restaurantId);
+                    const analytics: any = await backend.getAnalytics(
+                        user.restaurantId
+                    );
                     const context = {
-                        revenue: analytics.totalRevenue,
-                        averageTicket: analytics.averageTicket,
+                        revenue: analytics?.totalRevenue || 0,
+                        averageTicket: analytics?.averageTicket || 0,
                         loyaltyType: config.type
                     };
                     const result = await generateDynamicInsight("Programme de Fidélité", context);
-                    setAiInsight(result);
+                    if (isMounted) setAiInsight(result);
                 } else {
-                    setAiInsight("Le mode 'Tampons' est idéal pour les restaurants à forte fréquence de visite.");
+                    if (isMounted) setAiInsight("Le mode 'Tampons' est idéal pour les restaurants à forte fréquence de visite.");
                 }
             } catch (error) {
                 setAiInsight("Le mode 'Tampons' est idéal pour les restaurants à forte fréquence de visite.");
@@ -65,7 +68,9 @@ const LoyaltyProgram: React.FC = () => {
                 setIsInsightLoading(false);
             }
         };
+        let isMounted = true;
         fetchInsight();
+        return () => { isMounted = false; };
     }, [config.type]);
 
     const handleSave = () => {
@@ -102,7 +107,7 @@ const LoyaltyProgram: React.FC = () => {
         <div className="flex flex-col h-[calc(100vh-140px)] overflow-hidden">
             <div className="flex-1 overflow-y-auto px-4 lg:px-8 pb-20 max-w-5xl mx-auto w-full">
                 <h1 className="text-3xl font-bold text-gray-800 mb-8 mt-4">Programme de Fidélité</h1>
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
                     {[
                         { id: 'points', label: 'Points', icon: '🎯', desc: 'Classique & Flexible' },
@@ -113,11 +118,10 @@ const LoyaltyProgram: React.FC = () => {
                         <button
                             key={mode.id}
                             onClick={() => setConfig({ ...config, type: mode.id as LoyaltyProgramType })}
-                            className={`p-6 rounded-2xl border-2 flex flex-col items-center justify-center transition-all duration-200 group ${
-                                config.type === mode.id 
-                                ? 'border-brand-secondary bg-brand-secondary/5 text-brand-secondary ring-4 ring-brand-secondary/20 shadow-lg scale-105' 
+                            className={`p-6 rounded-2xl border-2 flex flex-col items-center justify-center transition-all duration-200 group ${config.type === mode.id
+                                ? 'border-brand-secondary bg-brand-secondary/5 text-brand-secondary ring-4 ring-brand-secondary/20 shadow-lg scale-105'
                                 : 'border-gray-200 bg-white text-gray-500 hover:border-brand-primary/30 hover:bg-gray-50'
-                            }`}
+                                }`}
                         >
                             <span className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-200">{mode.icon}</span>
                             <span className="font-bold text-lg">{mode.label}</span>
@@ -148,16 +152,16 @@ const LoyaltyProgram: React.FC = () => {
                 <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 space-y-8 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-2 bg-brand-secondary"></div>
                     <h3 className="font-bold text-2xl text-gray-800 border-b border-gray-100 pb-4">Configuration : Mode {config.type.charAt(0).toUpperCase() + config.type.slice(1)}</h3>
-                    
+
                     {config.type === 'points' && (
                         <div className="space-y-6">
                             <div>
                                 <label className="block text-base font-bold text-gray-700 mb-3">Générosité (Points par Euro)</label>
                                 <div className="flex items-center space-x-6">
-                                    <input 
-                                        type="range" min="0.5" max="5" step="0.5" 
+                                    <input
+                                        type="range" min="0.5" max="5" step="0.5"
                                         value={config.spendingRatio}
-                                        onChange={(e) => setConfig({...config, spendingRatio: parseFloat(e.target.value)})}
+                                        onChange={(e) => setConfig({ ...config, spendingRatio: parseFloat(e.target.value) })}
                                         className="flex-1 h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-secondary"
                                     />
                                     <div className="bg-brand-primary text-white px-4 py-2 rounded-xl font-bold text-xl min-w-[100px] text-center shadow-md">
@@ -174,9 +178,9 @@ const LoyaltyProgram: React.FC = () => {
                                 <div>
                                     <label className="block text-base font-bold text-gray-700 mb-3">Objectif à atteindre (Tampons)</label>
                                     <div className="flex items-center space-x-4">
-                                        <button onClick={() => setConfig({...config, targetCount: Math.max(5, (config.targetCount || 10) - 1)})} className="w-12 h-12 rounded-xl bg-gray-100 font-bold hover:bg-gray-200 text-xl text-gray-600 transition-colors">-</button>
+                                        <button onClick={() => setConfig({ ...config, targetCount: Math.max(5, (config.targetCount || 10) - 1) })} className="w-12 h-12 rounded-xl bg-gray-100 font-bold hover:bg-gray-200 text-xl text-gray-600 transition-colors">-</button>
                                         <span className="text-4xl font-extrabold text-brand-dark w-32 text-center">{config.targetCount}</span>
-                                        <button onClick={() => setConfig({...config, targetCount: Math.min(20, (config.targetCount || 10) + 1)})} className="w-12 h-12 rounded-xl bg-gray-100 font-bold hover:bg-gray-200 text-xl text-gray-600 transition-colors">+</button>
+                                        <button onClick={() => setConfig({ ...config, targetCount: Math.min(20, (config.targetCount || 10) + 1) })} className="w-12 h-12 rounded-xl bg-gray-100 font-bold hover:bg-gray-200 text-xl text-gray-600 transition-colors">+</button>
                                     </div>
                                 </div>
                                 <div className="bg-brand-light/30 border border-brand-primary/20 p-4 rounded-xl relative">
@@ -185,10 +189,10 @@ const LoyaltyProgram: React.FC = () => {
                                     </div>
                                     <label className="block text-sm font-bold text-brand-primary mb-2">Boost Démarrage ("Illusion de Progrès")</label>
                                     <div className="flex items-center space-x-4">
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked={!!config.welcomeBonus && config.welcomeBonus > 0}
-                                            onChange={(e) => setConfig({...config, welcomeBonus: e.target.checked ? 2 : 0})}
+                                            onChange={(e) => setConfig({ ...config, welcomeBonus: e.target.checked ? 2 : 0 })}
                                             className="w-6 h-6 text-brand-secondary rounded focus:ring-brand-secondary cursor-pointer"
                                         />
                                         <span className="text-gray-800 font-medium">Offrir 2 tampons à l'inscription ?</span>
@@ -203,10 +207,10 @@ const LoyaltyProgram: React.FC = () => {
                             <div>
                                 <label className="block text-base font-bold text-gray-700 mb-3">Palier de dépenses (€)</label>
                                 <div className="relative max-w-sm">
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         value={config.targetSpending}
-                                        onChange={(e) => setConfig({...config, targetSpending: parseInt(e.target.value)})}
+                                        onChange={(e) => setConfig({ ...config, targetSpending: parseInt(e.target.value) })}
                                         className="w-full border-2 border-gray-200 rounded-xl p-4 text-xl font-bold focus:ring-4 focus:ring-brand-primary/20 focus:border-brand-primary transition-all pr-12"
                                     />
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xl">€</span>
@@ -246,16 +250,16 @@ const LoyaltyProgram: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                     <div className="md:col-span-2">
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Titre de la mission</label>
-                                        <input type="text" placeholder="Ex: Manger 3 Burgers" className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand-primary" value={newMission.title} onChange={(e) => setNewMission({...newMission, title: e.target.value})} />
+                                        <input type="text" placeholder="Ex: Manger 3 Burgers" className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand-primary" value={newMission.title} onChange={(e) => setNewMission({ ...newMission, title: e.target.value })} />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Objectif (Qté)</label>
-                                        <input type="number" min="1" className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand-primary" value={newMission.goal} onChange={(e) => setNewMission({...newMission, goal: parseInt(e.target.value)})} />
+                                        <input type="number" min="1" className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand-primary" value={newMission.goal} onChange={(e) => setNewMission({ ...newMission, goal: parseInt(e.target.value) })} />
                                     </div>
                                 </div>
                                 <div className="mb-4">
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Récompense</label>
-                                    <input type="text" placeholder="Ex: 1 Dessert" className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand-primary" value={newMission.reward} onChange={(e) => setNewMission({...newMission, reward: e.target.value})} />
+                                    <input type="text" placeholder="Ex: 1 Dessert" className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand-primary" value={newMission.reward} onChange={(e) => setNewMission({ ...newMission, reward: e.target.value })} />
                                 </div>
                                 <button onClick={addMission} disabled={!newMission.title || !newMission.reward} className="w-full py-3 bg-brand-secondary text-white font-bold rounded-xl shadow hover:bg-orange-700 disabled:opacity-50 transition-all">Ajouter la mission</button>
                             </div>
@@ -265,7 +269,7 @@ const LoyaltyProgram: React.FC = () => {
                     {config.type !== 'missions' && (
                         <div className="pt-6 border-t border-gray-100">
                             <label className="block text-base font-bold text-gray-700 mb-3">Récompense principale</label>
-                            <input type="text" value={config.rewardLabel} onChange={(e) => setConfig({...config, rewardLabel: e.target.value})} className="w-full border-2 border-gray-200 rounded-xl p-4 text-lg focus:ring-4 focus:ring-brand-primary/20 focus:border-brand-primary bg-gray-50 transition-all" placeholder="Ex: Burger Offert..." />
+                            <input type="text" value={config.rewardLabel} onChange={(e) => setConfig({ ...config, rewardLabel: e.target.value })} className="w-full border-2 border-gray-200 rounded-xl p-4 text-lg focus:ring-4 focus:ring-brand-primary/20 focus:border-brand-primary bg-gray-50 transition-all" placeholder="Ex: Burger Offert..." />
                         </div>
                     )}
                 </div>

@@ -15,6 +15,8 @@ import LoyaltyAnalytics from './components/LoyaltyAnalytics';
 import RestaurantProfileEditor from './components/RestaurantProfileEditor';
 import ReservationsManager from './components/ReservationsManager';
 import { mockBackend } from '../shared/mockBackend';
+import { firestoreService } from '../shared/services/firestoreService';
+import { USE_FIREBASE } from '../shared/services/apiConfig';
 
 const RestaurateurApp: React.FC = () => {
     const [currentView, setCurrentView] = useState<RestaurateurView>('dashboard');
@@ -31,8 +33,13 @@ const RestaurateurApp: React.FC = () => {
     };
 
     const handleLogout = () => {
-        mockBackend.logout();
-        window.location.reload();
+        if (USE_FIREBASE) {
+            firestoreService.logout();
+            window.location.reload();
+        } else {
+            mockBackend.logout();
+            window.location.reload();
+        }
     };
 
     if (currentView === 'pos') {

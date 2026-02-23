@@ -5,7 +5,7 @@ import { CreateLoyaltyProgramDto } from './dto/create-loyalty-program.dto';
 
 @Injectable()
 export class LoyaltyService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async validateVisit(userId: string, validateDto: ValidateVisitDto) {
     const { restaurantId, validationCode, amount } = validateDto;
@@ -59,7 +59,7 @@ export class LoyaltyService {
       switch (program.type) {
         case 'points':
           if (amount && program.spendingRatio) {
-            pointsEarned = Math.floor(amount * program.spendingRatio);
+            pointsEarned = Math.floor(amount * Number(program.spendingRatio));
           } else {
             pointsEarned = 50; // Points par défaut
           }
@@ -70,7 +70,7 @@ export class LoyaltyService {
         case 'spending':
           // Points basés sur le montant total dépensé
           if (amount && program.spendingRatio) {
-            pointsEarned = Math.floor(amount * program.spendingRatio);
+            pointsEarned = Math.floor(amount * Number(program.spendingRatio));
           }
           break;
         case 'missions':
@@ -273,6 +273,8 @@ export class LoyaltyService {
     }
   }
 }
+
+
 
 
 

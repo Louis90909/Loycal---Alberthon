@@ -1,4 +1,4 @@
-import { IsNumber, IsString, IsDateString, Min } from 'class-validator';
+import { IsNumber, IsString, IsDateString, Min, IsOptional } from 'class-validator';
 
 export class CreateReservationDto {
   @IsNumber()
@@ -13,7 +13,13 @@ export class CreateReservationDto {
   @IsNumber()
   @Min(1)
   guests: number;
+
+  @IsString()
+  @IsOptional()
+  flashPromoId?: string;
 }
+
+
 
 
 

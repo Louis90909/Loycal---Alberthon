@@ -18,8 +18,8 @@ model User {
   passwordHash  String    @map("password_hash")
   firstName     String    @map("first_name")
   lastName      String    @map("last_name")
-  role          UserRole
-  status        UserStatus @default(ACTIVE)
+  role          String
+  status        String @default("ACTIVE")
   restaurantId  Int?      @map("restaurant_id")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -37,17 +37,7 @@ model User {
   @@map("users")
 }
 
-enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  RESTAURATEUR
-  CLIENT
-}
 
-enum UserStatus {
-  ACTIVE
-  SUSPENDED
-}
 
 // ============================================
 // RESTAURANTS
@@ -58,14 +48,14 @@ model Restaurant {
   name            String
   cuisine         String?
   offer           String?  // Offre de bienvenue
-  description     String?  @db.Text
-  lat             Decimal? @db.Decimal(10, 8)
-  lng             Decimal? @db.Decimal(11, 8)
+  description     String? 
+  lat             Decimal?
+  lng             Decimal?
   budget          Int?     // 1, 2, ou 3
   popularity      String?
   ambiance        String?
-  status          RestaurantStatus @default(ACTIVE)
-  aggregateRating Decimal? @default(0) @map("aggregate_rating") @db.Decimal(3, 2)
+  status          String @default("ACTIVE")
+  aggregateRating Decimal? @default(0) @map("aggregate_rating")
   visitCount      Int      @default(0) @map("visit_count")
   rewardScore     Int      @default(0) @map("reward_score")
   createdAt       DateTime @default(now()) @map("created_at")
@@ -87,10 +77,6 @@ model Restaurant {
   @@map("restaurants")
 }
 
-enum RestaurantStatus {
-  ACTIVE
-  INACTIVE
-}
 
 // ============================================
 // PROGRAMME DE FIDÉLITÉ
@@ -99,10 +85,10 @@ enum RestaurantStatus {
 model LoyaltyProgram {
   id            String   @id @default(uuid())
   restaurantId  Int      @unique @map("restaurant_id")
-  type          LoyaltyProgramType
-  spendingRatio Decimal? @map("spending_ratio") @db.Decimal(5, 2)
+  type          String
+  spendingRatio Decimal? @map("spending_ratio")
   targetCount   Int?     @map("target_count")
-  targetSpending Decimal? @map("target_spending") @db.Decimal(10, 2)
+  targetSpending Decimal? @map("target_spending")
   welcomeBonus  Int      @default(0) @map("welcome_bonus")
   rewardLabel   String?  @map("reward_label")
   createdAt     DateTime @default(now()) @map("created_at")
@@ -114,12 +100,6 @@ model LoyaltyProgram {
   @@map("loyalty_programs")
 }
 
-enum LoyaltyProgramType {
-  points
-  stamps
-  spending
-  missions
-}
 
 model LoyaltyMission {
   id        String   @id @default(uuid())
@@ -146,7 +126,7 @@ model UserLoyaltyMembership {
   restaurantId      Int      @map("restaurant_id")
   points            Int      @default(0)
   stamps            Int      @default(0)
-  tier              LoyaltyTier @default(Bronze)
+  tier              String @default("Bronze")
   nextTierThreshold Int?     @map("next_tier_threshold")
   joinedDate        DateTime @default(now()) @map("joined_date")
   createdAt         DateTime @default(now()) @map("created_at")
@@ -160,11 +140,6 @@ model UserLoyaltyMembership {
   @@map("user_loyalty_memberships")
 }
 
-enum LoyaltyTier {
-  Bronze
-  Silver
-  Gold
-}
 
 model MissionProgress {
   id          String    @id @default(uuid())
@@ -190,7 +165,7 @@ model Reward {
   id          String    @id @default(uuid())
   restaurantId Int      @map("restaurant_id")
   type        String
-  description String    @db.Text
+  description String   
   cost        Int       // En points
   isRealTime  Boolean   @default(false) @map("is_real_time")
   expiry      DateTime?
@@ -224,7 +199,7 @@ model MenuItem {
   id          String    @id @default(uuid())
   restaurantId Int      @map("restaurant_id")
   name        String
-  price       Decimal   @db.Decimal(10, 2)
+  price       Decimal  
   category    String
   imageUrl    String?   @map("image_url")
   available   Boolean   @default(true)
@@ -246,10 +221,11 @@ model Reservation {
   id          String          @id @default(uuid())
   restaurantId Int            @map("restaurant_id")
   userId      String         @map("user_id")
-  date        DateTime       @db.Date
-  time        DateTime       @db.Time
+  date        DateTime      
+  time        DateTime      
   guests      Int
-  status      ReservationStatus @default(confirmed)
+  status      String @default("confirmed")
+  flashPromoId String?        @map("flash_promo_id")
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
 
@@ -260,11 +236,6 @@ model Reservation {
   @@map("reservations")
 }
 
-enum ReservationStatus {
-  confirmed
-  cancelled
-  completed
-}
 
 // ============================================
 // VISITES (TRANSACTIONS)
@@ -275,7 +246,7 @@ model Visit {
   userId          String   @map("user_id")
   restaurantId    Int      @map("restaurant_id")
   date            DateTime  @default(now())
-  amount          Decimal?  @db.Decimal(10, 2)
+  amount          Decimal? 
   pointsEarned    Int      @default(0) @map("points_earned")
   validationMethod String? @map("validation_method")
   validationCode String?  @map("validation_code")
@@ -297,9 +268,9 @@ model POSOrder {
   id            String        @id @default(uuid())
   restaurantId  Int           @map("restaurant_id")
   userId        String?       @map("user_id")
-  status        POSOrderStatus @default(pending)
-  total         Decimal        @db.Decimal(10, 2)
-  type          POSOrderType?
+  status        String @default("pending")
+  total         Decimal       
+  type          String?
   paymentMethod String?       @map("payment_method")
   tableNumber   String?       @map("table_number")
   appliedRewardId String?     @map("applied_reward_id")
@@ -315,24 +286,14 @@ model POSOrder {
   @@map("pos_orders")
 }
 
-enum POSOrderStatus {
-  pending
-  paid
-  cancelled
-}
 
-enum POSOrderType {
-  dine_in
-  takeaway
-  delivery
-}
 
 model POSOrderItem {
   id          String   @id @default(uuid())
   orderId     String   @map("order_id")
   menuItemId  String   @map("menu_item_id")
   quantity    Int
-  price       Decimal  @db.Decimal(10, 2)
+  price       Decimal 
   createdAt   DateTime @default(now()) @map("created_at")
 
   order       POSOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -349,9 +310,9 @@ model Campaign {
   id            String          @id @default(uuid())
   restaurantId  Int             @map("restaurant_id")
   name          String
-  type          CampaignType
-  status        CampaignStatus  @default(active)
-  description   String?         @db.Text
+  type          String
+  status        String  @default("active")
+  description   String?        
   targetSegment String?          @map("target_segment")
   flashPromoId  String?         @map("flash_promo_id")
   createdAt     DateTime        @default(now()) @map("created_at")
@@ -364,26 +325,14 @@ model Campaign {
   @@map("campaigns")
 }
 
-enum CampaignType {
-  SMS
-  Email
-  Push
-  reactivation
-  flash
-}
 
-enum CampaignStatus {
-  active
-  scheduled
-  ended
-}
 
 model CampaignStats {
   id            String   @id @default(uuid())
   campaignId    String   @unique @map("campaign_id")
-  openRate      Decimal  @default(0) @map("open_rate") @db.Decimal(5, 2)
-  conversionRate Decimal @default(0) @map("conversion_rate") @db.Decimal(5, 2)
-  revenue       Decimal  @default(0) @db.Decimal(10, 2)
+  openRate      Decimal  @default(0) @map("open_rate")
+  conversionRate Decimal @default(0) @map("conversion_rate")
+  revenue       Decimal  @default(0)
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
@@ -400,12 +349,12 @@ model FlashPromotion {
   restaurantId      Int      @map("restaurant_id")
   menuItemId        String   @map("menu_item_id")
   itemName          String   @map("item_name")
-  discountPrice     Decimal  @map("discount_price") @db.Decimal(10, 2)
-  originalPrice     Decimal  @map("original_price") @db.Decimal(10, 2)
+  discountPrice     Decimal  @map("discount_price")
+  originalPrice     Decimal  @map("original_price")
   quantityTotal     Int      @map("quantity_total")
   quantityRemaining Int      @map("quantity_remaining")
-  startTime         DateTime @db.Time @map("start_time")
-  endTime           DateTime @db.Time @map("end_time")
+  startTime         DateTime @map("start_time")
+  endTime           DateTime @map("end_time")
   active            Boolean  @default(true)
   targetSegment     String?  @map("target_segment")
   createdAt         DateTime @default(now()) @map("created_at")
@@ -425,7 +374,7 @@ model Promotion {
   id          String   @id @default(uuid())
   restaurantId Int     @map("restaurant_id")
   title       String
-  description String?  @db.Text
+  description String? 
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -444,11 +393,11 @@ model Customer {
   restaurantId      Int       @map("restaurant_id")
   visitsPerMonth    Int       @default(0) @map("visits_per_month")
   lastVisit         DateTime? @map("last_visit")
-  averageTicket     Decimal   @default(0) @map("average_ticket") @db.Decimal(10, 2)
-  totalRevenue      Decimal   @default(0) @map("total_revenue") @db.Decimal(10, 2)
+  averageTicket     Decimal   @default(0) @map("average_ticket")
+  totalRevenue      Decimal   @default(0) @map("total_revenue")
   loyaltyScore      Int       @default(0) @map("loyalty_score")
   status            String?
-  churnProbability  Decimal?  @map("churn_probability") @db.Decimal(5, 2)
+  churnProbability  Decimal?  @map("churn_probability")
   preferredDay      String?   @map("preferred_day")
   preferredService   String?   @map("preferred_service")
   createdAt         DateTime  @default(now()) @map("created_at")
@@ -467,7 +416,7 @@ model VisitHistory {
   customerId Int      @map("customer_id")
   month      String   // Format 'YYYY-MM'
   visits     Int      @default(0)
-  spent      Decimal  @default(0) @db.Decimal(10, 2)
+  spent      Decimal  @default(0)
   createdAt  DateTime @default(now()) @map("created_at")
 
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)

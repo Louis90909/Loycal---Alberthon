@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { POSOrder, MenuItem, OrderItem, Customer, Reward } from '../../../shared/types';
 import { MOCK_MENU, MOCK_CUSTOMERS } from '../../../shared/constants';
-import { mockBackend } from '../../../shared/mockBackend';
+import { getBackendService } from '../../../shared/services/apiConfig';
 import { Button, Card, CardHeader, CardContent, KPICard, Badge, Modal, Input, EmptyState } from '../../../shared/design';
 
 type POSScreen = 'home' | 'order' | 'payment' | 'invoice' | 'history' | 'settings';
@@ -27,11 +27,11 @@ const POSSidebar: React.FC<{ active: POSScreen, onChange: (s: POSScreen) => void
             {active === 'home' && <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-10 bg-orange-500 rounded-l-full"></div>}
         </button>
         <button onClick={() => onChange('order')} className={`relative p-4 rounded-2xl transition-all ${active === 'order' ? 'bg-orange-500 text-white shadow-xl scale-110' : 'text-indigo-200 hover:bg-white/10 hover:text-white'}`} title="Commande">
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
             {active === 'order' && <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-10 bg-orange-500 rounded-l-full"></div>}
         </button>
         <button onClick={() => onChange('history')} className={`relative p-4 rounded-2xl transition-all ${active === 'history' ? 'bg-orange-500 text-white shadow-xl scale-110' : 'text-indigo-200 hover:bg-white/10 hover:text-white'}`} title="Historique">
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             {active === 'history' && <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-10 bg-orange-500 rounded-l-full"></div>}
         </button>
         <button onClick={() => onChange('settings')} className={`relative mt-auto p-4 rounded-2xl transition-all ${active === 'settings' ? 'bg-orange-500 text-white shadow-xl scale-110' : 'text-indigo-200 hover:bg-white/10 hover:text-white'}`} title="Paramètres">
@@ -45,7 +45,7 @@ const POSSidebar: React.FC<{ active: POSScreen, onChange: (s: POSScreen) => void
 const POSHomeScreen: React.FC<{ onNewOrder: () => void, onEditOrder: (order: POSOrder) => void, orders: POSOrder[], settings: POSSettings }> = ({ onNewOrder, onEditOrder, orders, settings }) => {
     const isNoon = new Date().getHours() < 16;
     const activeOrders = orders.filter(o => o.status === 'draft' || o.status === 'pending');
-    
+
     const dailyTotal = orders.filter(o => o.status === 'paid').reduce((acc, curr) => acc + (curr.total || 0), 0);
     const coverCount = orders.filter(o => o.status === 'paid').length;
 
@@ -93,7 +93,7 @@ const POSHomeScreen: React.FC<{ onNewOrder: () => void, onEditOrder: (order: POS
             {/* Actions Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* CTA Nouvelle commande */}
-                <button 
+                <button
                     onClick={onNewOrder}
                     className="col-span-1 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-3xl shadow-2xl flex flex-col items-center justify-center transition-all transform hover:scale-105 min-h-[280px] group"
                 >
@@ -106,7 +106,7 @@ const POSHomeScreen: React.FC<{ onNewOrder: () => void, onEditOrder: (order: POS
 
                 {/* Orders in progress */}
                 <Card padding="lg" className={`col-span-1 lg:col-span-2 min-h-[420px] flex flex-col ${settings.darkMode ? 'bg-gray-900 border-gray-700' : ''}`}>
-                    <CardHeader 
+                    <CardHeader
                         title="Commandes en cours / Brouillons"
                         subtitle={`${activeOrders.length} commande(s) active(s)`}
                         icon={
@@ -128,14 +128,13 @@ const POSHomeScreen: React.FC<{ onNewOrder: () => void, onEditOrder: (order: POS
                             />
                         )}
                         {activeOrders.map(order => (
-                            <div 
-                                key={order.id} 
+                            <div
+                                key={order.id}
                                 onClick={() => onEditOrder(order)}
-                                className={`flex justify-between items-center p-5 rounded-2xl cursor-pointer border-2 transition-all hover:shadow-lg ${
-                                    settings.darkMode 
-                                    ? 'bg-gray-800 border-gray-700 hover:border-orange-500' 
-                                    : 'bg-white border-gray-200 hover:border-orange-500'
-                                }`}
+                                className={`flex justify-between items-center p-5 rounded-2xl cursor-pointer border-2 transition-all hover:shadow-lg ${settings.darkMode
+                                        ? 'bg-gray-800 border-gray-700 hover:border-orange-500'
+                                        : 'bg-white border-gray-200 hover:border-orange-500'
+                                    }`}
                             >
                                 <div className="flex items-center gap-4">
                                     <div className={`w-1 h-16 rounded-full ${order.status === 'draft' ? 'bg-gray-400' : (order.type === 'dine_in' ? 'bg-blue-500' : 'bg-orange-500')}`}></div>
@@ -146,7 +145,7 @@ const POSHomeScreen: React.FC<{ onNewOrder: () => void, onEditOrder: (order: POS
                                             </p>
                                             {order.status === 'draft' && <Badge variant="neutral" size="sm">Brouillon</Badge>}
                                         </div>
-                                        <p className="text-sm text-gray-500">{order.items.length} articles • {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                        <p className="text-sm text-gray-500">{order.items.length} articles • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                     </div>
                                 </div>
                                 <span className="font-bold text-2xl text-orange-600">{(order.total || 0).toFixed(2)} €</span>
@@ -192,7 +191,7 @@ const CustomerSearch: React.FC<{ onSelect: (c: Customer) => void, onCancel: () =
                     <h2 className="text-2xl font-bold text-gray-800">Identification Client Loïcal</h2>
                     <button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                 </div>
-                
+
                 <div className="flex p-4 space-x-2 bg-gray-50">
                     <button className="flex-1 py-3 bg-white border border-gray-200 rounded-xl font-semibold shadow-sm text-brand-primary">📞 Téléphone</button>
                     <button className="flex-1 py-3 bg-gray-200 border border-transparent text-gray-600 rounded-xl font-semibold">📷 Scan QR</button>
@@ -230,21 +229,21 @@ const CustomerSearch: React.FC<{ onSelect: (c: Customer) => void, onCancel: () =
 
 
 // --- ORDER SCREEN ---
-const POSOrderScreen: React.FC<{ 
-    currentOrder: POSOrder, 
-    onSaveDraft: (order: POSOrder) => void, 
+const POSOrderScreen: React.FC<{
+    currentOrder: POSOrder,
+    onSaveDraft: (order: POSOrder) => void,
     onDeleteOrder: (id: string) => void,
     onPayment: (order: POSOrder) => void,
     settings: POSSettings
 }> = ({ currentOrder, onSaveDraft, onDeleteOrder, onPayment, settings }) => {
-    
+
     // Local state for editing the order
     const [items, setItems] = useState<OrderItem[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>('Plats');
     const [linkedCustomer, setLinkedCustomer] = useState<Customer | undefined>(currentOrder.customer);
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
     const [showQuitModal, setShowQuitModal] = useState(false);
-    const [appliedDiscount, setAppliedDiscount] = useState<{desc: string, amount: number} | null>(
+    const [appliedDiscount, setAppliedDiscount] = useState<{ desc: string, amount: number } | null>(
         currentOrder.appliedReward ? { desc: currentOrder.appliedReward.description, amount: 5.00 } : null
     );
     const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>(currentOrder.type === 'takeaway' ? 'takeaway' : 'dine_in');
@@ -312,7 +311,7 @@ const POSOrderScreen: React.FC<{
                 }
             } else if (reward.cost === 0) {
                 // Free item? Assume ~8€ value for demo
-                discountAmount = 8.00; 
+                discountAmount = 8.00;
             }
         } else {
             // Manual discount
@@ -339,35 +338,33 @@ const POSOrderScreen: React.FC<{
                 {/* Categories */}
                 <div className={`h-20 shadow-sm flex items-center px-4 space-x-3 overflow-x-auto whitespace-nowrap scrollbar-hide ${settings.darkMode ? 'bg-gray-900' : 'bg-white'}`}>
                     {categories.map(cat => (
-                        <button 
-                            key={cat} 
+                        <button
+                            key={cat}
                             onClick={() => setSelectedCategory(cat)}
-                            className={`px-6 py-3 rounded-xl text-lg font-bold transition-all ${
-                                selectedCategory === cat 
-                                ? 'bg-brand-secondary text-white shadow-lg' 
-                                : settings.darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
+                            className={`px-6 py-3 rounded-xl text-lg font-bold transition-all ${selectedCategory === cat
+                                    ? 'bg-brand-secondary text-white shadow-lg'
+                                    : settings.darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
                         >
                             {cat}
                         </button>
                     ))}
                 </div>
-                
+
                 {/* Products Grid */}
                 <div className="flex-1 p-6 overflow-y-auto">
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {filteredItems.map(item => (
-                            <button 
-                                key={item.id} 
+                            <button
+                                key={item.id}
                                 onClick={() => addToCart(item)}
-                                className={`p-4 rounded-2xl shadow-sm border flex flex-col items-center text-center hover:shadow-md transition-shadow active:scale-95 ${
-                                    settings.darkMode 
-                                    ? 'bg-gray-900 border-gray-700' 
-                                    : 'bg-white border-gray-200'
-                                }`}
+                                className={`p-4 rounded-2xl shadow-sm border flex flex-col items-center text-center hover:shadow-md transition-shadow active:scale-95 ${settings.darkMode
+                                        ? 'bg-gray-900 border-gray-700'
+                                        : 'bg-white border-gray-200'
+                                    }`}
                             >
                                 <div className={`w-24 h-24 rounded-full mb-3 flex items-center justify-center overflow-hidden ${settings.darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                                     {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <span className="text-2xl">🍔</span>}
+                                    {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <span className="text-2xl">🍔</span>}
                                 </div>
                                 <span className={`font-bold text-lg leading-tight mb-1 ${settings.darkMode ? 'text-gray-100' : 'text-gray-800'}`}>{item.name}</span>
                                 <span className="text-brand-primary font-bold">{item.price.toFixed(2)} €</span>
@@ -386,13 +383,13 @@ const POSOrderScreen: React.FC<{
                     </div>
                     {/* Dine In / Take Away Toggle */}
                     <div className={`flex rounded-lg p-1 ${settings.darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                        <button 
+                        <button
                             onClick={() => setOrderType('dine_in')}
                             className={`flex-1 py-1 text-sm font-bold rounded-md transition-all ${orderType === 'dine_in' ? 'bg-white shadow text-brand-primary' : 'text-gray-500'}`}
                         >
                             🍽️ Sur place
                         </button>
-                        <button 
+                        <button
                             onClick={() => setOrderType('takeaway')}
                             className={`flex-1 py-1 text-sm font-bold rounded-md transition-all ${orderType === 'takeaway' ? 'bg-white shadow text-brand-primary' : 'text-gray-500'}`}
                         >
@@ -421,8 +418,8 @@ const POSOrderScreen: React.FC<{
 
                 {/* Loyalty Panel (Foldable) */}
                 <div className={`${settings.darkMode ? 'bg-gray-800 border-t border-gray-700' : 'bg-brand-light border-t border-brand-primary/20'}`}>
-                     {linkedCustomer ? (
-                         <div className="p-4 animate-fade-in-up">
+                    {linkedCustomer ? (
+                        <div className="p-4 animate-fade-in-up">
                             <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center">
                                     <div className="relative">
@@ -436,13 +433,13 @@ const POSOrderScreen: React.FC<{
                                 </div>
                                 <button onClick={() => setLinkedCustomer(undefined)} className="text-gray-400 hover:text-red-500">✕</button>
                             </div>
-                            
+
                             {/* Available Rewards Logic */}
                             {!appliedDiscount ? (
                                 <div className="mt-3 space-y-2">
                                     <p className="text-xs font-bold text-gray-500 uppercase">Avantages Disponibles</p>
-                                    <button 
-                                        onClick={() => handleApplyReward()} 
+                                    <button
+                                        onClick={() => handleApplyReward()}
                                         className={`w-full flex justify-between items-center p-2 border rounded-lg transition-colors ${settings.darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'bg-white border-brand-secondary/30 hover:bg-orange-50'}`}
                                     >
                                         <span className="font-bold text-brand-secondary text-sm">Remise Commerciale</span>
@@ -455,15 +452,15 @@ const POSOrderScreen: React.FC<{
                                     <button onClick={() => setAppliedDiscount(null)} className="text-xs text-red-500 hover:underline">Retirer</button>
                                 </div>
                             )}
-                         </div>
-                     ) : (
-                         <button 
+                        </div>
+                    ) : (
+                        <button
                             onClick={() => setShowCustomerSearch(true)}
                             className="w-full p-4 flex items-center justify-center text-brand-primary font-bold hover:bg-brand-primary/5 transition-colors"
                         >
-                             <span className="mr-2 text-xl">🤝</span> Identifier Client Loïcal
-                         </button>
-                     )}
+                            <span className="mr-2 text-xl">🤝</span> Identifier Client Loïcal
+                        </button>
+                    )}
                 </div>
 
                 {/* Footer Total & Actions */}
@@ -480,12 +477,12 @@ const POSOrderScreen: React.FC<{
                             <span>{total.toFixed(2)} €</span>
                         </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-3">
-                         <button onClick={() => setShowQuitModal(true)} className="py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300">
+                        <button onClick={() => setShowQuitModal(true)} className="py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300">
                             Quitter
                         </button>
-                        <button 
+                        <button
                             onClick={() => onPayment(prepareOrderObject('pending'))}
                             disabled={items.length === 0}
                             className="py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none transition-all"
@@ -497,9 +494,9 @@ const POSOrderScreen: React.FC<{
             </div>
 
             {showCustomerSearch && <CustomerSearch onSelect={(c) => { setLinkedCustomer(c); setShowCustomerSearch(false); }} onCancel={() => setShowCustomerSearch(false)} />}
-            
-            <QuitOrderModal 
-                isOpen={showQuitModal} 
+
+            <QuitOrderModal
+                isOpen={showQuitModal}
                 onClose={() => setShowQuitModal(false)}
                 onSave={() => {
                     onSaveDraft(prepareOrderObject('draft'));
@@ -515,14 +512,14 @@ const POSOrderScreen: React.FC<{
 };
 
 // --- PAYMENT SCREEN ---
-const POSPaymentScreen: React.FC<{ order: POSOrder, onComplete: (method: 'card'|'cash'|'other') => void, onBack: () => void }> = ({ order, onComplete, onBack }) => {
+const POSPaymentScreen: React.FC<{ order: POSOrder, onComplete: (method: 'card' | 'cash' | 'other') => void, onBack: () => void }> = ({ order, onComplete, onBack }) => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-    
+
     // Use order total safely
     const orderTotal = (order.total || 0).toFixed(2);
 
-    const handlePayment = (method: 'card'|'cash'|'other') => {
+    const handlePayment = (method: 'card' | 'cash' | 'other') => {
         setIsProcessing(true);
         // Simulate processing
         setTimeout(() => {
@@ -572,11 +569,11 @@ const POSPaymentScreen: React.FC<{ order: POSOrder, onComplete: (method: 'card'|
 
                 {order.customer && (
                     <div className="mb-6 bg-brand-light border-l-4 border-brand-primary p-4 rounded-r-lg flex items-center shadow-sm">
-                         <span className="text-2xl mr-3">🎉</span>
-                         <div>
-                             <p className="font-bold text-brand-dark">Client Loïcal identifié : {order.customer.name}</p>
-                             <p className="text-sm text-brand-primary">Les avantages fidélité seront appliqués après paiement.</p>
-                         </div>
+                        <span className="text-2xl mr-3">🎉</span>
+                        <div>
+                            <p className="font-bold text-brand-dark">Client Loïcal identifié : {order.customer.name}</p>
+                            <p className="text-sm text-brand-primary">Les avantages fidélité seront appliqués après paiement.</p>
+                        </div>
                     </div>
                 )}
 
@@ -613,7 +610,7 @@ const POSPaymentScreen: React.FC<{ order: POSOrder, onComplete: (method: 'card'|
                             </p>
                         )}
                         <div className="bg-gray-50 p-4 rounded-xl mb-6 text-sm text-gray-500">
-                             Génération de la facture...
+                            Génération de la facture...
                         </div>
                     </div>
                 </div>
@@ -627,7 +624,7 @@ const POSInvoiceScreen: React.FC<{ order: POSOrder, onFinished: () => void, sett
     const [isPrinting, setIsPrinting] = useState(settings.autoPrint);
 
     useEffect(() => {
-        if(settings.autoPrint) {
+        if (settings.autoPrint) {
             const timer = setTimeout(() => setIsPrinting(false), 2500);
             return () => clearTimeout(timer);
         }
@@ -644,7 +641,7 @@ const POSInvoiceScreen: React.FC<{ order: POSOrder, onFinished: () => void, sett
 
     return (
         <div className="flex h-full bg-gray-100 p-8 items-center justify-center relative">
-            
+
             {/* Auto Print Overlay */}
             {isPrinting && (
                 <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
@@ -657,14 +654,14 @@ const POSInvoiceScreen: React.FC<{ order: POSOrder, onFinished: () => void, sett
 
             {/* Actions Left */}
             <div className="mr-8 flex flex-col space-y-4">
-                 <button className="bg-white p-4 rounded-xl shadow font-bold text-gray-700 flex items-center space-x-2 hover:bg-gray-50">
+                <button className="bg-white p-4 rounded-xl shadow font-bold text-gray-700 flex items-center space-x-2 hover:bg-gray-50">
                     <span>🖨️</span> <span>Imprimer Ticket</span>
-                 </button>
-                 <button className="bg-white p-4 rounded-xl shadow font-bold text-gray-700 flex items-center space-x-2 hover:bg-gray-50">
+                </button>
+                <button className="bg-white p-4 rounded-xl shadow font-bold text-gray-700 flex items-center space-x-2 hover:bg-gray-50">
                     <span>📧</span> <span>Envoyer par Email</span>
-                 </button>
-                 <div className="h-8"></div>
-                 <button 
+                </button>
+                <div className="h-8"></div>
+                <button
                     onClick={onFinished}
                     className="w-48 py-4 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-dark shadow-lg transition-transform hover:scale-105"
                 >
@@ -674,9 +671,9 @@ const POSInvoiceScreen: React.FC<{ order: POSOrder, onFinished: () => void, sett
 
             {/* Visual Receipt */}
             <div className="bg-white w-[350px] shadow-2xl text-gray-800 font-mono text-sm relative overflow-hidden animate-fade-in-up">
-                 {/* Top Jagged Edge */}
-                 <div className="absolute top-0 left-0 right-0 h-4 bg-gray-100" style={{maskImage: 'radial-gradient(circle, transparent 5px, black 6px)', maskSize: '15px 15px', maskPosition: 'bottom'}}></div>
-                
+                {/* Top Jagged Edge */}
+                <div className="absolute top-0 left-0 right-0 h-4 bg-gray-100" style={{ maskImage: 'radial-gradient(circle, transparent 5px, black 6px)', maskSize: '15px 15px', maskPosition: 'bottom' }}></div>
+
                 <div className="p-8 pt-10">
                     <div className="text-center mb-6">
                         <h2 className="text-xl font-bold uppercase mb-1">Le Bistrot Gourmand</h2>
@@ -725,7 +722,7 @@ const POSInvoiceScreen: React.FC<{ order: POSOrder, onFinished: () => void, sett
                         <span>TOTAL</span>
                         <span>{(order.total || 0).toFixed(2)} €</span>
                     </div>
-                    
+
                     <div className="text-center text-xs">
                         <p>Moyen de paiement: {order.paymentMethod === 'card' ? 'CARTE BANCAIRE' : 'ESPÈCES'}</p>
                         <p>TVA (10%): {((order.total || 0) * 0.1).toFixed(2)} €</p>
@@ -738,7 +735,7 @@ const POSInvoiceScreen: React.FC<{ order: POSOrder, onFinished: () => void, sett
                             <p className="text-xs mt-1">Points gagnés sur cet achat !</p>
                         </div>
                     )}
-                    
+
                     <div className="mt-8 text-center text-xs">
                         <p>Merci de votre visite !</p>
                         <p>À bientôt</p>
@@ -746,7 +743,7 @@ const POSInvoiceScreen: React.FC<{ order: POSOrder, onFinished: () => void, sett
                 </div>
 
                 {/* Bottom Jagged Edge */}
-                <div className="absolute bottom-0 left-0 right-0 h-4 bg-gray-100" style={{maskImage: 'radial-gradient(circle, transparent 5px, black 6px)', maskSize: '15px 15px', maskPosition: 'top'}}></div>
+                <div className="absolute bottom-0 left-0 right-0 h-4 bg-gray-100" style={{ maskImage: 'radial-gradient(circle, transparent 5px, black 6px)', maskSize: '15px 15px', maskPosition: 'top' }}></div>
             </div>
         </div>
     );
@@ -757,7 +754,7 @@ const POSSettingsScreen: React.FC<{ settings: POSSettings, onToggle: (key: keyof
     return (
         <div className="flex-1 p-10 bg-gray-50 overflow-y-auto">
             <h1 className="text-3xl font-bold text-gray-800 mb-8">Paramètres POS</h1>
-            
+
             <div className="max-w-2xl space-y-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                     <h3 className="font-bold text-lg mb-4 text-gray-800">Général</h3>
@@ -785,7 +782,7 @@ const POSSettingsScreen: React.FC<{ settings: POSSettings, onToggle: (key: keyof
                     </div>
                     <div className="flex items-center justify-between py-3">
                         <span className="text-gray-700 font-medium">En-tête personnalisé</span>
-                         <span className="text-gray-400 text-sm">Le Bistrot Gourmand &gt;</span>
+                        <span className="text-gray-400 text-sm">Le Bistrot Gourmand &gt;</span>
                     </div>
                 </div>
 
@@ -811,7 +808,7 @@ const POSSystem: React.FC = () => {
     const [activeScreen, setActiveScreen] = useState<POSScreen>('home');
     const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
     const [orders, setOrders] = useState<POSOrder[]>([]);
-    
+
     // Lifted Settings State
     const [settings, setSettings] = useState<POSSettings>({
         darkMode: false,
@@ -820,28 +817,41 @@ const POSSystem: React.FC = () => {
     });
 
     useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        let isMounted = true;
+
         const loadOrders = async () => {
             try {
-                const user = mockBackend.getCurrentUser();
+                const backend = await getBackendService();
+                const user = backend.getCurrentUser();
                 if (user?.restaurantId) {
-                    const orders = await mockBackend.getPOSOrders(user.restaurantId);
-                    setOrders(orders);
+                    const rId = user.restaurantId;
+                    const orders = await backend.getPOSOrders?.(rId) || [];
+                    if (isMounted) setOrders(orders);
+                }
+                if (backend.subscribe && !unsubscribe) {
+                    unsubscribe = backend.subscribe(loadOrders);
                 }
             } catch (error) {
                 console.error('Error loading POS orders:', error);
             }
         };
         loadOrders();
-        const unsub = mockBackend.subscribe(loadOrders);
-        return unsub;
+
+        return () => {
+            isMounted = false;
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     const toggleSetting = (key: keyof POSSettings) => {
-        setSettings(prev => ({...prev, [key]: !prev[key]}));
+        setSettings(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
     const handleNewOrder = async () => {
-        const user = mockBackend.getCurrentUser();
+        const backend = await getBackendService();
+        const user = backend.getCurrentUser();
+        const rId = user?.restaurantId ? (user.restaurantId) : 1;
         const newOrder: POSOrder = {
             id: `#CMD-${Date.now().toString().slice(-4)}`,
             items: [],
@@ -849,10 +859,12 @@ const POSSystem: React.FC = () => {
             status: 'draft',
             createdAt: new Date().toISOString(),
             type: 'dine_in',
-            restaurantId: user?.restaurantId || 1
+            restaurantId: rId
         };
         try {
-            await mockBackend.savePOSOrder(newOrder);
+            if (backend.savePOSOrder) {
+                await backend.savePOSOrder(newOrder);
+            }
             setCurrentOrderId(newOrder.id);
             setActiveScreen('order');
         } catch (error) {
@@ -867,7 +879,8 @@ const POSSystem: React.FC = () => {
 
     const handleSaveDraft = async (order: POSOrder) => {
         try {
-            await mockBackend.savePOSOrder(order);
+            const backend = await getBackendService();
+            if (backend.savePOSOrder) await backend.savePOSOrder(order);
             setCurrentOrderId(null);
             setActiveScreen('home');
         } catch (error) {
@@ -877,7 +890,8 @@ const POSSystem: React.FC = () => {
 
     const handleDeleteOrder = async (id: string) => {
         try {
-            await mockBackend.deletePOSOrder(id);
+            const backend = await getBackendService();
+            if (backend.deletePOSOrder) await backend.deletePOSOrder(id);
             setCurrentOrderId(null);
             setActiveScreen('home');
         } catch (error) {
@@ -887,24 +901,26 @@ const POSSystem: React.FC = () => {
 
     const handleProceedToPayment = async (order: POSOrder) => {
         try {
-            await mockBackend.savePOSOrder({ ...order, status: 'pending' });
+            const backend = await getBackendService();
+            if (backend.savePOSOrder) await backend.savePOSOrder({ ...order, status: 'pending' });
             setActiveScreen('payment');
         } catch (error) {
             console.error('Error saving order:', error);
         }
     };
 
-    const handlePaymentComplete = async (method: 'card'|'cash'|'other') => {
+    const handlePaymentComplete = async (method: 'card' | 'cash' | 'other') => {
         if (currentOrderId) {
             try {
-                await mockBackend.payOrder(currentOrderId, method);
+                const backend = await getBackendService();
+                if (backend.payOrder) await backend.payOrder(currentOrderId, method);
                 setActiveScreen('invoice');
             } catch (error) {
                 console.error('Error processing payment:', error);
             }
         }
     };
-    
+
     const handleOrderFinished = () => {
         setCurrentOrderId(null);
         setActiveScreen('home');
@@ -915,30 +931,30 @@ const POSSystem: React.FC = () => {
     return (
         <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-300 ${settings.darkMode ? 'dark bg-gray-900' : 'bg-gray-100'}`}>
             <POSSidebar active={activeScreen} onChange={setActiveScreen} settings={settings} />
-            
+
             <div className="flex-1 flex flex-col h-full relative">
                 {activeScreen === 'home' && <POSHomeScreen onNewOrder={handleNewOrder} onEditOrder={handleEditOrder} orders={orders} settings={settings} />}
-                
+
                 {activeScreen === 'order' && currentOrder && (
-                    <POSOrderScreen 
+                    <POSOrderScreen
                         currentOrder={currentOrder}
                         onSaveDraft={handleSaveDraft}
                         onDeleteOrder={handleDeleteOrder}
                         onPayment={handleProceedToPayment}
-                        settings={settings} 
+                        settings={settings}
                     />
                 )}
 
                 {activeScreen === 'payment' && currentOrder && (
-                    <POSPaymentScreen 
-                        order={currentOrder} 
+                    <POSPaymentScreen
+                        order={currentOrder}
                         onComplete={handlePaymentComplete}
                         onBack={() => setActiveScreen('order')}
                     />
                 )}
 
                 {activeScreen === 'invoice' && currentOrder && (
-                    <POSInvoiceScreen 
+                    <POSInvoiceScreen
                         order={currentOrder}
                         onFinished={handleOrderFinished}
                         settings={settings}
@@ -948,46 +964,45 @@ const POSSystem: React.FC = () => {
                 {activeScreen === 'history' && (
                     <div className="flex-1 p-8 bg-gray-50">
                         <h1 className="text-3xl font-bold text-gray-800 mb-6">Historique des Tickets</h1>
-                         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                             <table className="w-full text-left">
-                                 <thead className="bg-gray-100 border-b border-gray-200">
-                                     <tr>
-                                         <th className="p-4 font-bold text-gray-600">ID</th>
-                                         <th className="p-4 font-bold text-gray-600">Heure</th>
-                                         <th className="p-4 font-bold text-gray-600">Type</th>
-                                         <th className="p-4 font-bold text-gray-600">Client</th>
-                                         <th className="p-4 font-bold text-gray-600">Total</th>
-                                         <th className="p-4 font-bold text-gray-600">Statut</th>
-                                     </tr>
-                                 </thead>
-                                 <tbody className="divide-y divide-gray-100">
-                                     {orders.map(o => (
-                                         <tr key={o.id} className="hover:bg-gray-50">
-                                             <td className="p-4 font-medium text-gray-900">{o.id}</td>
-                                             <td className="p-4 text-gray-500">{new Date(o.createdAt).toLocaleTimeString()}</td>
-                                             <td className="p-4 text-gray-500 capitalize">{o.type.replace('_', ' ')}</td>
-                                             <td className="p-4">
-                                                 {o.customer ? (
-                                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-secondary/10 text-brand-secondary">
-                                                         {o.customer.name}
-                                                     </span>
-                                                 ) : <span className="text-gray-400">-</span>}
-                                             </td>
-                                             <td className="p-4 font-bold text-gray-800">{(o.total || 0).toFixed(2)} €</td>
-                                             <td className="p-4">
-                                                 <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                                     o.status === 'paid' ? 'bg-green-100 text-green-800' : 
-                                                     o.status === 'draft' ? 'bg-gray-200 text-gray-700' :
-                                                     'bg-yellow-100 text-yellow-800'
-                                                 }`}>
-                                                     {o.status === 'paid' ? 'Payé' : o.status === 'draft' ? 'Brouillon' : 'En cours'}
-                                                 </span>
-                                             </td>
-                                         </tr>
-                                     ))}
-                                 </tbody>
-                             </table>
-                         </div>
+                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-100 border-b border-gray-200">
+                                    <tr>
+                                        <th className="p-4 font-bold text-gray-600">ID</th>
+                                        <th className="p-4 font-bold text-gray-600">Heure</th>
+                                        <th className="p-4 font-bold text-gray-600">Type</th>
+                                        <th className="p-4 font-bold text-gray-600">Client</th>
+                                        <th className="p-4 font-bold text-gray-600">Total</th>
+                                        <th className="p-4 font-bold text-gray-600">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {orders.map(o => (
+                                        <tr key={o.id} className="hover:bg-gray-50">
+                                            <td className="p-4 font-medium text-gray-900">{o.id}</td>
+                                            <td className="p-4 text-gray-500">{new Date(o.createdAt).toLocaleTimeString()}</td>
+                                            <td className="p-4 text-gray-500 capitalize">{o.type.replace('_', ' ')}</td>
+                                            <td className="p-4">
+                                                {o.customer ? (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-secondary/10 text-brand-secondary">
+                                                        {o.customer.name}
+                                                    </span>
+                                                ) : <span className="text-gray-400">-</span>}
+                                            </td>
+                                            <td className="p-4 font-bold text-gray-800">{(o.total || 0).toFixed(2)} €</td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded text-xs font-bold ${o.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                                        o.status === 'draft' ? 'bg-gray-200 text-gray-700' :
+                                                            'bg-yellow-100 text-yellow-800'
+                                                    }`}>
+                                                    {o.status === 'paid' ? 'Payé' : o.status === 'draft' ? 'Brouillon' : 'En cours'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 

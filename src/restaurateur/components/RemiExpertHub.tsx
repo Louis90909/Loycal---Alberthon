@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { RemiIcon } from './icons/RemiIcon';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import { chatWithRemi } from '../services/geminiService';
-import { mockBackend } from '../../shared/mockBackend';
+import { getBackendService } from '../../shared/services/apiConfig';
 
 interface Message {
     role: 'user' | 'remi';
@@ -41,16 +41,17 @@ const RemiExpertHub: React.FC = () => {
         setIsLoading(true);
 
         try {
-            // 1. Get Contextual Data
-            const user = mockBackend.getCurrentUser();
-            const restaurant = mockBackend.getRestaurants().find(r => r.id === user?.restaurantId);
-            const analytics = await mockBackend.getAnalytics(user?.restaurantId || 1);
+            const backend = await getBackendService();
+            const user = backend.getCurrentUser();
+            const rId = user?.restaurantId ? (user.restaurantId) : null;
+            const restaurant = rId ? await backend.getRestaurant(rId) : null;
+            const analytics: any = await backend.getAnalytics(rId || 1);
 
             const context = {
                 restaurantName: restaurant?.name || "Mon Restaurant",
                 cuisine: restaurant?.cuisine || "Inconnue",
-                revenue: analytics.totalRevenue.toFixed(0),
-                averageTicket: analytics.averageTicket.toFixed(2),
+                revenue: (analytics?.totalRevenue || 0).toFixed(0),
+                averageTicket: (analytics?.averageTicket || 0).toFixed(2),
                 loyaltyType: restaurant?.loyaltyConfig?.type || "Non défini",
                 memberCount: 124 // Mocked count
             };
@@ -66,9 +67,9 @@ const RemiExpertHub: React.FC = () => {
             setMessages(prev => [...prev, { role: 'remi', content: response }]);
         } catch (error) {
             console.error(error);
-            setMessages(prev => [...prev, { 
-                role: 'remi', 
-                content: "Oups, j'ai eu un petit problème de connexion avec ma toque de chef. Pouvez-vous réessayer dans un instant ?" 
+            setMessages(prev => [...prev, {
+                role: 'remi',
+                content: "Oups, j'ai eu un petit problème de connexion avec ma toque de chef. Pouvez-vous réessayer dans un instant ?"
             }]);
         } finally {
             setIsLoading(false);
@@ -98,13 +99,13 @@ const RemiExpertHub: React.FC = () => {
             </div>
 
             {/* Message Area */}
-            <div 
+            <div
                 ref={scrollRef}
                 className="flex-1 bg-slate-50 overflow-y-auto p-6 space-y-6 scroll-smooth"
             >
                 {messages.map((msg, idx) => (
-                    <div 
-                        key={idx} 
+                    <div
+                        key={idx}
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}
                     >
                         <div className={`flex max-w-[85%] sm:max-w-[70%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start`}>
@@ -113,11 +114,10 @@ const RemiExpertHub: React.FC = () => {
                                     <RemiIcon className="w-full h-full" />
                                 </div>
                             )}
-                            <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                                msg.role === 'user' 
-                                ? 'bg-brand-primary text-white rounded-tr-none' 
-                                : 'bg-white text-gray-800 border border-gray-200 rounded-tl-none'
-                            }`}>
+                            <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
+                                    ? 'bg-brand-primary text-white rounded-tr-none'
+                                    : 'bg-white text-gray-800 border border-gray-200 rounded-tl-none'
+                                }`}>
                                 {msg.content.split('\n').map((line, i) => (
                                     <p key={i} className={line.startsWith('#') ? 'font-bold text-base my-2' : 'mb-2'}>
                                         {line}
@@ -143,8 +143,8 @@ const RemiExpertHub: React.FC = () => {
                 {!isLoading && (
                     <div className="flex space-x-2 overflow-x-auto pb-4 mb-4 scrollbar-hide">
                         {suggestions.map((s, i) => (
-                            <button 
-                                key={i} 
+                            <button
+                                key={i}
                                 onClick={() => handleSend(s)}
                                 className="px-4 py-2 bg-slate-100 hover:bg-brand-secondary/10 hover:text-brand-secondary border border-slate-200 rounded-full text-[11px] font-bold text-gray-600 whitespace-nowrap transition-all active:scale-95"
                             >
@@ -156,7 +156,7 @@ const RemiExpertHub: React.FC = () => {
 
                 <div className="flex space-x-4 items-end">
                     <div className="flex-1 relative">
-                        <textarea 
+                        <textarea
                             rows={1}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
@@ -175,7 +175,7 @@ const RemiExpertHub: React.FC = () => {
                             </svg>
                         </div>
                     </div>
-                    <button 
+                    <button
                         onClick={() => handleSend(input)}
                         disabled={!input.trim() || isLoading}
                         className="bg-brand-secondary hover:bg-orange-600 text-white h-[56px] px-8 rounded-2xl font-bold shadow-lg shadow-brand-secondary/20 disabled:bg-gray-200 disabled:shadow-none transition-all transform active:scale-95 flex items-center justify-center min-w-[120px]"

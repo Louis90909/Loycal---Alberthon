@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Restaurant, FlashPromotion } from '../../shared/types';
 import { mockBackend } from '../../shared/mockBackend';
+import { getBackendService } from '../../shared/services/apiConfig';
 import BookingModal from './BookingModal';
 import { SpinnerIcon } from '../../restaurateur/components/icons/SpinnerIcon';
 import { RemiIcon } from '../../restaurateur/components/icons/RemiIcon';
@@ -112,6 +113,7 @@ const CategoryPill: React.FC<{ label: string, emoji: string, isActive: boolean, 
 const LoyerHome: React.FC<LoyerHomeProps> = ({ restaurants, onToggleFollow, onRate, onNavigateToMap, onRestaurantClick }) => {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [bookingTarget, setBookingTarget] = useState<{ name: string, id: number } | null>(null);
+    const [userName, setUserName] = useState<string>('Client');
     const [flashBooking, setFlashBooking] = useState<{
         promo: FlashPromotion,
         restaurantName: string,
@@ -121,16 +123,22 @@ const LoyerHome: React.FC<LoyerHomeProps> = ({ restaurants, onToggleFollow, onRa
     const [flashPromos, setFlashPromos] = useState<FlashPromotion[]>([]);
 
     useEffect(() => {
-        const loadFlash = async () => {
+        const loadData = async () => {
             try {
                 const promos = await mockBackend.getAllActiveFlashPromotions();
                 setFlashPromos(promos);
+
+                const backend = await getBackendService();
+                const user = backend.getCurrentUser();
+                if (user?.firstName) {
+                    setUserName(user.firstName);
+                }
             } catch (error) {
-                console.error('Error loading flash promotions:', error);
+                console.error('Error loading data:', error);
             }
         };
-        loadFlash();
-        const unsub = mockBackend.subscribe(loadFlash);
+        loadData();
+        const unsub = mockBackend.subscribe(loadData);
         return unsub;
     }, []);
 
@@ -163,7 +171,7 @@ const LoyerHome: React.FC<LoyerHomeProps> = ({ restaurants, onToggleFollow, onRa
             <header className="pt-16 px-6 pb-4">
                 <div className="flex justify-between items-end mb-4">
                     <div>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Salut Alexandre 👋</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Salut {userName} 👋</p>
                         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">Faim de loup ? 🐺</h1>
                     </div>
                     <div className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-md">

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { mockBackend } from '../../shared/mockBackend';
+import { firestoreService } from '../../shared/services/firestoreService';
+import { USE_FIREBASE, getBackendService } from '../../shared/services/apiConfig';
+import type { User, Restaurant } from '../../shared/types';
 
 interface HeaderProps {
     title: string;
@@ -8,13 +10,27 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ title, onNavigate }) => {
     const [showMenu, setShowMenu] = useState(false);
-    const user = mockBackend.getCurrentUser();
-    const restaurant = user?.restaurantId
-        ? mockBackend.getRestaurants().find(r => r.id === user.restaurantId)
-        : null;
+    const [user, setUser] = useState<User | null>(null);
+    const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
 
-    const handleLogout = () => {
-        mockBackend.logout();
+    React.useEffect(() => {
+        const load = async () => {
+            const backend = await getBackendService();
+            const currentUser = backend.getCurrentUser();
+            setUser(currentUser);
+            if (currentUser?.restaurantId) {
+                const r = await backend.getRestaurant(
+                    currentUser.restaurantId
+                );
+                setRestaurant(r);
+            }
+        };
+        load();
+    }, []);
+
+    const handleLogout = async () => {
+        const backend = await getBackendService();
+        backend.logout();
         window.location.reload();
     };
 

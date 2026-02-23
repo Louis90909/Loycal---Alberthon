@@ -1,5 +1,5 @@
 
-import { MOCK_RESTAURANTS, MOCK_POS_ORDERS, MOCK_PROMOTIONS, MOCK_VALIDATION_CODES, MOCK_CAMPAIGNS, MOCK_MENU } from './constants';
+import { MOCK_RESTAURANTS, MOCK_POS_ORDERS, MOCK_PROMOTIONS, MOCK_VALIDATION_CODES, MOCK_CAMPAIGNS, MOCK_MENU, MOCK_CUSTOMERS } from './constants';
 import type { User, Restaurant, MenuItem, FlashPromotion, Campaign, Customer, POSOrder, Reservation } from './types';
 
 const STORAGE_KEY = 'loycal_data_store';
@@ -33,7 +33,7 @@ class MockBackend {
                 users: [
                     { id: 'u1', email: 'admin@loycal.com', role: 'ADMIN', firstName: 'Super', lastName: 'Admin', createdAt: new Date().toISOString(), status: 'ACTIVE' },
                     { id: 'u2', email: 'resto@bistrot.com', role: 'RESTAURATEUR', firstName: 'Jean', lastName: 'Bistrot', createdAt: new Date().toISOString(), status: 'ACTIVE', restaurantId: 1 },
-                    { id: 'u3', email: 'alexandre@gmail.com', role: 'CLIENT', firstName: 'Alexandre', lastName: 'Dupont', createdAt: new Date().toISOString(), status: 'ACTIVE' },
+                    { id: 'u3', email: 'client@loycal.com', role: 'CLIENT', firstName: 'Client', lastName: 'Demo', createdAt: new Date().toISOString(), status: 'ACTIVE' },
                 ],
                 restaurants: [...MOCK_RESTAURANTS],
                 posOrders: [...MOCK_POS_ORDERS],
@@ -260,6 +260,19 @@ class MockBackend {
                     topItems: [], // Mock
                     revenueByDay: [], // Mock
                 });
+            }, 300);
+        });
+    }
+
+    async getRestaurantCustomers(restaurantId: number | string): Promise<Customer[]> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const rIdNum = typeof restaurantId === 'string' ? parseInt(restaurantId) || 1 : restaurantId;
+                const customers: Customer[] = MOCK_CUSTOMERS.map(c => ({
+                    ...c,
+                    id: c.id.toString(),
+                })) as any;
+                resolve(customers); // In a mock we just return the global mocked list
             }, 300);
         });
     }

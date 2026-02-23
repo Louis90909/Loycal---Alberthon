@@ -1,12 +1,11 @@
-import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
-import { LoyaltyProgramType } from '@prisma/client';
+import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateLoyaltyProgramDto {
   @IsNumber()
   restaurantId: number;
 
-  @IsEnum(LoyaltyProgramType)
-  type: LoyaltyProgramType;
+  @IsString()
+  type: string;
 
   @IsNumber()
   @IsOptional()
@@ -32,9 +31,3 @@ export class CreateLoyaltyProgramDto {
   @IsOptional()
   rewardLabel?: string;
 }
-
-
-
-
-
-

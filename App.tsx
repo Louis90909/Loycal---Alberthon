@@ -4,7 +4,9 @@ import RestaurateurApp from './src/restaurateur/RestaurateurApp';
 import LoyerApp from './src/loyer/LoyerApp';
 import AdminApp from './src/admin/AdminApp';
 import AuthScreen from './src/auth/AuthScreen';
+import { firestoreService } from './src/shared/services/firestoreService';
 import { mockBackend } from './src/shared/mockBackend';
+import { USE_FIREBASE } from './src/shared/services/apiConfig';
 import { SpinnerIcon } from './src/restaurateur/components/icons/SpinnerIcon';
 import type { User } from './src/shared/types';
 
@@ -13,17 +15,27 @@ const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Initial check
-        const currentUser = mockBackend.getCurrentUser();
-        setUser(currentUser);
-        setIsLoading(false);
+        if (USE_FIREBASE) {
+            // Avec Firebase : attendre que onAuthStateChanged soit résolu
+            // firestoreService.subscribe notifie après chaque changement d'auth
+            const unsub = firestoreService.subscribe(() => {
+                const currentUser = firestoreService.getCurrentUser();
+                setUser(currentUser);
+                setIsLoading(false);
+            });
+            return unsub;
+        } else {
+            // Mode mock
+            const currentUser = mockBackend.getCurrentUser();
+            setUser(currentUser);
+            setIsLoading(false);
 
-        // Subscribe to auth changes
-        const unsub = mockBackend.subscribe(() => {
-            const updatedUser = mockBackend.getCurrentUser();
-            setUser(updatedUser);
-        });
-        return unsub;
+            const unsub = mockBackend.subscribe(() => {
+                const updatedUser = mockBackend.getCurrentUser();
+                setUser(updatedUser);
+            });
+            return unsub;
+        }
     }, []);
 
     if (isLoading) {

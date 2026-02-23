@@ -21,8 +21,7 @@
 ## 🎥 Demo Video
 
 **Watch the full demonstration (3-5 minutes):**  
-🔗 **[Loom Video - Loycal Platform Demo](#)**  
-*(Link to be added - User will provide Loom recording)*
+🔗 **[Loom Video - Loycal Platform Demo](https://www.loom.com/share/ac601be9eaa04b0baa69bc3be8448c98)**  
 
 The demo showcases:
 - User authentication flow (customer & restaurateur)

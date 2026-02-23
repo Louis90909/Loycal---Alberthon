@@ -1,5 +1,6 @@
-import React from 'react';
-import { MOCK_CUSTOMER_SEGMENTS, MOCK_CUSTOMERS } from '../../shared/constants';
+import React, { useState, useEffect } from 'react';
+import { MOCK_CUSTOMER_SEGMENTS } from '../../shared/constants';
+import { getBackendService } from '../../shared/services/apiConfig';
 import type { Customer } from '../../shared/types';
 import { StarIcon, DiamondIcon, SyncIcon, ZapOffIcon } from './icons/StatusIcons';
 
@@ -13,7 +14,7 @@ const statusMap: Record<Customer['status'], { icon: React.FC<any>, color: string
     VIP: { icon: DiamondIcon, color: 'text-purple-500', label: 'VIP' },
 };
 
-const CustomerRow: React.FC<{ customer: Customer; onSelect: (id: number) => void }> = ({ customer, onSelect }) => {
+const CustomerRow: React.FC<{ customer: Customer; onSelect: (id: string | number) => void }> = ({ customer, onSelect }) => {
     const StatusIcon = statusMap[customer.status].icon;
     const statusColor = statusMap[customer.status].color;
 
@@ -43,7 +44,35 @@ const CustomerRow: React.FC<{ customer: Customer; onSelect: (id: number) => void
 };
 
 
-const CustomerSegments: React.FC<{onSelectCustomer: (id: number) => void, showStats?: boolean}> = ({ onSelectCustomer, showStats = true }) => {
+const CustomerSegments: React.FC<{ onSelectCustomer: (id: string | number) => void, showStats?: boolean }> = ({ onSelectCustomer, showStats = true }) => {
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        let isMounted = true;
+        const load = async () => {
+            setIsLoading(true);
+            try {
+                const backend = await getBackendService();
+                const user = backend.getCurrentUser();
+                if (user?.restaurantId && backend.getRestaurantCustomers) {
+                    const data = await backend.getRestaurantCustomers(user.restaurantId);
+                    if (isMounted) setCustomers(data);
+                }
+            } catch (error) {
+                console.error("Error loading customers", error);
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
+        load();
+        return () => { isMounted = false; };
+    }, []);
+
+    if (isLoading) {
+        return <div className="p-8 text-center text-gray-500 font-medium">Chargement des clients...</div>;
+    }
+
     return (
         <div className="space-y-8">
             {showStats && (
@@ -81,9 +110,13 @@ const CustomerSegments: React.FC<{onSelectCustomer: (id: number) => void, showSt
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {MOCK_CUSTOMERS.map(customer => (
+                            {customers.length > 0 ? customers.map(customer => (
                                 <CustomerRow key={customer.id} customer={customer} onSelect={onSelectCustomer} />
-                            ))}
+                            )) : (
+                                <tr>
+                                    <td colSpan={5} className="py-8 text-center text-gray-500">Aucun client trouvé pour cet établissement.</td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

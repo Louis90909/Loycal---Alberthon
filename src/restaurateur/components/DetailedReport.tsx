@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import { RemiIcon } from './icons/RemiIcon';
 import { generateAnalyticalReport } from '../services/geminiService';
-import { mockBackend } from '../../shared/mockBackend';
+import { getBackendService } from '../../shared/services/apiConfig';
 
 interface DetailedReportProps {
     onClose: () => void;
@@ -18,11 +18,14 @@ const DetailedReport: React.FC<DetailedReportProps> = ({ onClose, type }) => {
     const handleGenerateCustom = async () => {
         setIsLoading(true);
         try {
-            const user = mockBackend.getCurrentUser();
+            const backend = await getBackendService();
+            const user = backend.getCurrentUser();
             if (!user?.restaurantId) {
                 throw new Error('Restaurant non trouvé');
             }
-            const analytics = await mockBackend.getAnalytics(user.restaurantId);
+            const analytics = await backend.getAnalytics(
+                user.restaurantId
+            );
             const result = await generateAnalyticalReport(customTheme, analytics);
             setReportContent(result);
         } catch (error: any) {
@@ -62,14 +65,14 @@ const DetailedReport: React.FC<DetailedReportProps> = ({ onClose, type }) => {
                             </div>
                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Thématique du rapport</label>
-                                <textarea 
+                                <textarea
                                     value={customTheme}
                                     onChange={(e) => setCustomTheme(e.target.value)}
                                     placeholder="Ex: Analyse de la rentabilité des offres du midi vs soir..."
                                     rows={4}
                                     className="w-full border-gray-200 rounded-xl p-4 focus:ring-2 focus:ring-brand-primary outline-none bg-slate-50"
                                 />
-                                <button 
+                                <button
                                     onClick={handleGenerateCustom}
                                     disabled={isLoading}
                                     className="w-full mt-6 py-4 bg-brand-secondary text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 transition-all flex justify-center items-center"

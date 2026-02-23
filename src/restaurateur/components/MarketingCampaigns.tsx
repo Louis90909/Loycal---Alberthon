@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { mockBackend } from '../../shared/mockBackend';
+import { getBackendService } from '../../shared/services/apiConfig';
 import { RemiIcon } from './icons/RemiIcon';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import type { Campaign, MenuItem, Restaurant } from '../../shared/types';
@@ -13,7 +13,7 @@ const MarketingCampaigns: React.FC = () => {
     const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
 
     const [formData, setFormData] = useState({
-        name: '', type: 'Push' as any, description: '', 
+        name: '', type: 'Push' as any, description: '',
         targetSegment: 'Tous les membres'
     });
 
@@ -24,26 +24,39 @@ const MarketingCampaigns: React.FC = () => {
     });
 
     useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        let isMounted = true;
+
         const load = async () => {
             try {
-                const user = mockBackend.getCurrentUser();
-                if (!user?.restaurantId) return;
+                const backend = await getBackendService();
+                const user = backend.getCurrentUser();
+                if (!user?.restaurantId || !isMounted) return;
 
-                const r = await mockBackend.getRestaurant(user.restaurantId);
+                const r = await backend.getRestaurant(
+                    user.restaurantId
+                );
                 if (r) {
                     setRestaurant(r);
                 }
 
-                const campaigns = await mockBackend.getCampaigns(user.restaurantId);
-                setCampaigns(campaigns);
+                const campaigns = await backend.getCampaigns(user.restaurantId);
+                if (isMounted) setCampaigns(campaigns);
+
+                if (backend.subscribe) {
+                    unsubscribe = backend.subscribe(load);
+                }
             } catch (error) {
                 console.error('Error loading campaigns:', error);
             }
         };
 
         load();
-        const unsub = mockBackend.subscribe(load);
-        return unsub;
+
+        return () => {
+            isMounted = false;
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -53,15 +66,16 @@ const MarketingCampaigns: React.FC = () => {
             if (!restaurant?.id) {
                 throw new Error('Restaurant non trouvé');
             }
-            await mockBackend.createCampaign({ 
-                ...formData, 
-                restaurantId: restaurant.id, 
-                status: 'active' 
+            const backend = await getBackendService();
+            await backend.createCampaign({
+                ...formData,
+                restaurantId: restaurant.id,
+                status: 'active'
             });
             setIsWizardOpen(false);
-            
+
             // Recharger les campagnes
-            const updatedCampaigns = await mockBackend.getCampaigns(restaurant.id);
+            const updatedCampaigns = await backend.getCampaigns(restaurant.id);
             setCampaigns(updatedCampaigns);
         } catch (error: any) {
             console.error('Error creating campaign:', error);
@@ -86,7 +100,8 @@ const MarketingCampaigns: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            await mockBackend.createFlashPromotion({
+            const backend = await getBackendService();
+            await backend.createFlashPromotion({
                 restaurantId: restaurant.id,
                 menuItemId: item.id,
                 itemName: item.name,
@@ -101,9 +116,9 @@ const MarketingCampaigns: React.FC = () => {
             } as any);
             setIsFlashOpen(false);
             alert("Vente Flash lancée et notifications envoyées !");
-            
+
             // Recharger les campagnes et promotions
-            const updatedCampaigns = await mockBackend.getCampaigns(restaurant.id);
+            const updatedCampaigns = await backend.getCampaigns(restaurant.id);
             setCampaigns(updatedCampaigns);
         } catch (error: any) {
             console.error('Error creating flash promotion:', error);
@@ -172,29 +187,29 @@ const MarketingCampaigns: React.FC = () => {
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nom</label>
-                                <input required type="text" className="w-full border-gray-300 rounded-lg p-3 border" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Ex: Offre Weekend" />
+                                <input required type="text" className="w-full border-gray-300 rounded-lg p-3 border" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: Offre Weekend" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Ciblage intelligent</label>
-                                    <select className="w-full border-gray-300 rounded-lg p-3 border" value={formData.targetSegment} onChange={e => setFormData({...formData, targetSegment: e.target.value})}>
+                                    <select className="w-full border-gray-300 rounded-lg p-3 border" value={formData.targetSegment} onChange={e => setFormData({ ...formData, targetSegment: e.target.value })}>
                                         <option>Tous les membres</option>
                                         <option>Clients du jeudi soir</option>
-                                         <option>Gros paniers (&gt;40€)</option>
+                                        <option>Gros paniers (&gt;40€)</option>
                                         <option>Inactifs depuis 30j</option>
                                         <option>VIP Gold</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Canal</label>
-                                    <select className="w-full border-gray-300 rounded-lg p-3 border" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})}>
+                                    <select className="w-full border-gray-300 rounded-lg p-3 border" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value as any })}>
                                         <option value="Push">Push App</option><option value="SMS">SMS</option><option value="Email">Email</option>
                                     </select>
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Message</label>
-                                <textarea required className="w-full border-gray-300 rounded-lg p-3 border" rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+                                <textarea required className="w-full border-gray-300 rounded-lg p-3 border" rows={3} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                             </div>
                             <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-brand-primary text-white font-bold rounded-xl shadow-lg flex justify-center items-center">
                                 {isSubmitting ? <SpinnerIcon /> : "Lancer la campagne"}
@@ -215,7 +230,7 @@ const MarketingCampaigns: React.FC = () => {
                         <form onSubmit={handleFlashSubmit} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Choisir un plat de votre carte</label>
-                                <select required className="w-full border-gray-300 rounded-lg p-3 border bg-white" value={flashData.menuItemId} onChange={e => setFlashData({...flashData, menuItemId: e.target.value})}>
+                                <select required className="w-full border-gray-300 rounded-lg p-3 border bg-white" value={flashData.menuItemId} onChange={e => setFlashData({ ...flashData, menuItemId: e.target.value })}>
                                     <option value="">-- Sélectionner un plat --</option>
                                     {restaurant?.menu?.map(item => (
                                         <option key={item.id} value={item.id}>{item.name} ({item.price}€)</option>
@@ -225,17 +240,17 @@ const MarketingCampaigns: React.FC = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Prix Promo (€)</label>
-                                    <input type="number" step="0.5" className="w-full border-gray-300 rounded-lg p-3 border" value={flashData.discountPrice} onChange={e => setFlashData({...flashData, discountPrice: parseFloat(e.target.value)})} />
+                                    <input type="number" step="0.5" className="w-full border-gray-300 rounded-lg p-3 border" value={flashData.discountPrice} onChange={e => setFlashData({ ...flashData, discountPrice: parseFloat(e.target.value) })} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Quantité Max</label>
-                                    <input type="number" className="w-full border-gray-300 rounded-lg p-3 border" value={flashData.quantityTotal} onChange={e => setFlashData({...flashData, quantityTotal: parseInt(e.target.value)})} />
+                                    <input type="number" className="w-full border-gray-300 rounded-lg p-3 border" value={flashData.quantityTotal} onChange={e => setFlashData({ ...flashData, quantityTotal: parseInt(e.target.value) })} />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Ciblage</label>
-                                    <select className="w-full border-gray-300 rounded-lg p-3 border" value={flashData.targetSegment} onChange={e => setFlashData({...flashData, targetSegment: e.target.value})}>
+                                    <select className="w-full border-gray-300 rounded-lg p-3 border" value={flashData.targetSegment} onChange={e => setFlashData({ ...flashData, targetSegment: e.target.value })}>
                                         <option>Clients du jeudi soir</option>
                                         <option>Gros paniers</option>
                                         <option>Tous les membres</option>
@@ -244,9 +259,9 @@ const MarketingCampaigns: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Horaires (Début - Fin)</label>
                                     <div className="flex items-center space-x-2">
-                                        <input type="time" className="w-full border-gray-300 rounded-lg p-2 border text-xs" value={flashData.startTime} onChange={e => setFlashData({...flashData, startTime: e.target.value})} />
+                                        <input type="time" className="w-full border-gray-300 rounded-lg p-2 border text-xs" value={flashData.startTime} onChange={e => setFlashData({ ...flashData, startTime: e.target.value })} />
                                         <span>-</span>
-                                        <input type="time" className="w-full border-gray-300 rounded-lg p-2 border text-xs" value={flashData.endTime} onChange={e => setFlashData({...flashData, endTime: e.target.value})} />
+                                        <input type="time" className="w-full border-gray-300 rounded-lg p-2 border text-xs" value={flashData.endTime} onChange={e => setFlashData({ ...flashData, endTime: e.target.value })} />
                                     </div>
                                 </div>
                             </div>

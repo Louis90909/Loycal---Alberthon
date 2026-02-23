@@ -3,9 +3,10 @@ import { PrismaService } from '../database/prisma.service';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 
+
 @Injectable()
 export class RestaurantsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async findAll(activeOnly: boolean = true) {
     const where = activeOnly ? { status: 'ACTIVE' } : {};
@@ -38,6 +39,7 @@ export class RestaurantsService {
         promotions: {
           where: { active: true },
         },
+        users: true,
       },
     });
 
@@ -99,9 +101,3 @@ export class RestaurantsService {
     return menuItems;
   }
 }
-
-
-
-
-
-

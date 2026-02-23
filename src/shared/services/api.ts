@@ -217,6 +217,16 @@ class ApiService {
     }
   }
 
+  async getRestaurantCustomers(restaurantId: number | string): Promise<Customer[]> {
+    try {
+      const response = await this.api.get(`/restaurants/${restaurantId}/customers`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching customers:', error);
+      return [];
+    }
+  }
+
   // ============================================
   // CAMPAIGNS
   // ============================================
@@ -490,6 +500,8 @@ export const apiService = new ApiService();
 
 // Export pour compatibilité avec mockBackend
 export default apiService;
+
+
 
 
 

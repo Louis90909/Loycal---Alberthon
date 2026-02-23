@@ -7,7 +7,9 @@ import LoyerProfile from './components/LoyerProfile';
 import LoyerLoyalty from './components/LoyerLoyalty';
 import LoyerBottomNav from './components/LoyerBottomNav';
 import RestaurantDetails from './components/RestaurantDetails';
-import InRestoFlow from './components/InRestoFlow'; 
+import InRestoFlow from './components/InRestoFlow';
+import { firestoreService } from '../shared/services/firestoreService';
+import { USE_FIREBASE } from '../shared/services/apiConfig';
 import { mockBackend } from '../shared/mockBackend';
 import { RemiIcon } from '../restaurateur/components/icons/RemiIcon';
 
@@ -42,8 +44,8 @@ const LoyerApp: React.FC = () => {
     useEffect(() => {
         const loadRestaurants = async () => {
             try {
-                // getRestaurants ne renvoie QUE les restaurants 'ACTIVE'
-                const activeRestaurants = await mockBackend.getRestaurants(true);
+                const backend = USE_FIREBASE ? firestoreService : mockBackend;
+                const activeRestaurants = await backend.getRestaurants(true);
                 setRestaurants(activeRestaurants);
 
                 // Si le restaurant sélectionné a été supprimé ou désactivé, on revient à l'accueil
@@ -63,10 +65,11 @@ const LoyerApp: React.FC = () => {
         loadRestaurants();
 
         // Subscribe to changes
-        const unsub = mockBackend.subscribe(() => {
+        const backend = USE_FIREBASE ? firestoreService : mockBackend;
+        const unsub = backend.subscribe(() => {
             loadRestaurants();
         });
-        
+
         return unsub;
     }, [selectedRestaurant]);
 
@@ -76,14 +79,14 @@ const LoyerApp: React.FC = () => {
             const hour = new Date().getHours();
             setIsDarkMode(hour >= 19 || hour < 7);
         };
-        
+
         checkTime();
         const interval = setInterval(checkTime, 60000);
         return () => clearInterval(interval);
     }, []);
 
     const toggleFollow = (id: number) => {
-        setRestaurants(prev => prev.map(r => 
+        setRestaurants(prev => prev.map(r =>
             r.id === id ? { ...r, isFollowed: !r.isFollowed } : r
         ));
         if (selectedRestaurant?.id === id) {
@@ -92,11 +95,11 @@ const LoyerApp: React.FC = () => {
     };
 
     const handleRate = (id: number, rating: number) => {
-        setRestaurants(prev => prev.map(r => 
+        setRestaurants(prev => prev.map(r =>
             r.id === id ? { ...r, userRating: rating } : r
         ));
     };
-    
+
     const handleNavigateToMap = (filter?: string) => {
         if (filter) setMapFilter(filter);
         setCurrentView('map');
@@ -128,10 +131,10 @@ const LoyerApp: React.FC = () => {
                 return <LoyerProfile restaurants={restaurants} />;
             case 'restaurant-details':
                 return selectedRestaurant ? (
-                    <RestaurantDetails 
-                        restaurant={selectedRestaurant} 
-                        onBack={handleBackFromDetails} 
-                        onToggleFollow={toggleFollow} 
+                    <RestaurantDetails
+                        restaurant={selectedRestaurant}
+                        onBack={handleBackFromDetails}
+                        onToggleFollow={toggleFollow}
                     />
                 ) : <LoyerHome restaurants={restaurants} onToggleFollow={toggleFollow} onRate={handleRate} onNavigateToMap={handleNavigateToMap} onRestaurantClick={handleRestaurantClick} />;
             default:
@@ -144,21 +147,21 @@ const LoyerApp: React.FC = () => {
             {/* Phone Mockup Container */}
             <div className="relative w-full h-full md:max-w-[390px] md:max-h-[844px] bg-black md:rounded-[50px] md:p-[10px] shadow-2xl overflow-hidden z-0 ring-8 ring-gray-900/20">
                 <div className="w-full h-full bg-gray-50 dark:bg-slate-900 md:rounded-[40px] overflow-hidden flex flex-col relative transition-colors duration-500 isolate">
-                     
-                     {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
-                     {/* Dynamic Island & Status Bar */}
+                    {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+
+                    {/* Dynamic Island & Status Bar */}
                     <div className="absolute top-0 left-0 right-0 h-14 z-50 pointer-events-none flex justify-between items-start px-7 pt-4 bg-gradient-to-b from-white/90 to-transparent dark:from-black/80">
                         <div className="text-sm font-semibold text-gray-900 dark:text-white">
                             {new Date().getHours()}:{new Date().getMinutes().toString().padStart(2, '0')}
                         </div>
                         {/* Notch Area */}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[35px] bg-black rounded-b-3xl"></div>
-                        
+
                         <div className="flex space-x-1.5 items-center">
-                             <div className="h-3 w-4 bg-gray-900 dark:bg-white rounded-sm"></div> {/* Wifi */}
-                             <div className="h-3 w-2 bg-gray-900 dark:bg-white rounded-sm"></div> {/* Battery Body */}
-                             <div className="h-1.5 w-0.5 bg-gray-900 dark:bg-white rounded-r-sm"></div> {/* Battery Tip */}
+                            <div className="h-3 w-4 bg-gray-900 dark:bg-white rounded-sm"></div> {/* Wifi */}
+                            <div className="h-3 w-2 bg-gray-900 dark:bg-white rounded-sm"></div> {/* Battery Body */}
+                            <div className="h-1.5 w-0.5 bg-gray-900 dark:bg-white rounded-r-sm"></div> {/* Battery Tip */}
                         </div>
                     </div>
 
@@ -168,30 +171,35 @@ const LoyerApp: React.FC = () => {
                         {/* Spacer for floating nav */}
                         {currentView !== 'restaurant-details' && <div className="h-28"></div>}
                     </main>
-                    
+
                     {/* NEW: In-Resto Flow Overlay */}
                     {showInResto && (
-                        <InRestoFlow 
-                            restaurants={restaurants} 
-                            onClose={() => setShowInResto(false)} 
+                        <InRestoFlow
+                            restaurants={restaurants}
+                            onClose={() => setShowInResto(false)}
                         />
                     )}
-                    
+
                     {/* Bottom Navigation - Floating Style */}
                     {currentView !== 'restaurant-details' && (
-                        <LoyerBottomNav 
-                            currentView={currentView} 
-                            setCurrentView={setCurrentView} 
+                        <LoyerBottomNav
+                            currentView={currentView}
+                            setCurrentView={setCurrentView}
                             onOpenInResto={handleOpenInResto} // Pass handler
                         />
                     )}
                 </div>
             </div>
-            
-            <button 
-                onClick={() => {
-                    mockBackend.logout();
-                    window.location.reload();
+
+            <button
+                onClick={async () => {
+                    if (USE_FIREBASE) {
+                        firestoreService.logout();
+                        window.location.reload();
+                    } else {
+                        mockBackend.logout();
+                        window.location.reload();
+                    }
                 }}
                 className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-full text-xs opacity-50 hover:opacity-100 z-[9999]"
             >

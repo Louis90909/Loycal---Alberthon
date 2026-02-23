@@ -10,6 +10,7 @@ import { ReservationsModule } from './reservations/reservations.module';
 import { POSModule } from './pos/pos.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AIModule } from './ai/ai.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -26,9 +27,12 @@ import { AIModule } from './ai/ai.module';
     POSModule,
     AnalyticsModule,
     AIModule,
+    AdminModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
+
+
 
 
 
